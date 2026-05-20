@@ -2,8 +2,8 @@ services:
   postgres:
     image: postgres:14
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: mentor
+      POSTGRES_DB: mentor
       POSTGRES_PASSWORD: 123456
     ports:
-      - "5432:5432"
+      - "5532:5432"

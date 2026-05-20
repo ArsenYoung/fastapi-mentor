@@ -7,6 +7,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 from src.models.base import Base
+from src.models.authors import AuthorsOrm
+from src.models.books import BooksOrm
+from src.models.courses import CoursesOrm
+from src.models.students import StudentsOrm
+from src.models.persons import PersonsOrm
+from src.models.passports import PassportsOrm
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
