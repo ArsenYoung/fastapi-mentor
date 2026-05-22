@@ -1,17 +1,13 @@
 from fastapi import APIRouter, Body, Depends
 
-from src.db import get_session
-from src.repositories.authors import AuthorsRepository
-from src.repositories.books import BooksRepository
 from src.schemas.authors import AuthorAddRequest
-from src.schemas.books import BookAdd
 from src.services.authors_books import AuthorsBooksService, get_authors_books_service
 
 
 router = APIRouter(prefix="/authors", tags=["Авторы и книги"])
 
 
-@router.post("", summary="Добавить автора и его книги")
+@router.post("", summary="Добавить автора и его книги", status_code=201)
 async def post_author_with_books(
     data: AuthorAddRequest = Body(openapi_examples={
             "1": {
@@ -32,4 +28,5 @@ async def post_author_with_books(
     ),
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ):
-    return await service.create_author_with_books(data)
+    await service.create_author_with_books(data)
+    return {"status": "ok"}

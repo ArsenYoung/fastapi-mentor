@@ -16,9 +16,7 @@ class AuthorsBooksService():
             BookAdd(author_id=author_res.id, title=item.title)
             for item in data.books
         ]
-        books_res = await self.books_repo.add_bulk(books_data)
-
-        return books_res
+        await self.books_repo.add_bulk(books_data)
     
 async def get_authors_books_service():
     async with get_session() as session:

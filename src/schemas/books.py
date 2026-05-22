@@ -11,7 +11,6 @@ class BookAdd(BookAddRequest):
 
 class BookRead(BaseModel):
     id: int
-    author_id: int
     title: str
 
 class Book(BookRead):
