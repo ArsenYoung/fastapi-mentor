@@ -5,3 +5,6 @@ class UnexpectedException(Exception):
 
 class ObjectAlreadyExists(UnexpectedException):
     detail = "Объект уже существует"
+
+class ObjectNotFound(UnexpectedException):
+    detail = "Объект не существует"
