@@ -1,11 +1,12 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.schemas.books import BookCreate, BookRead
+from src.schemas.books import BookAddRequest, BookRead
 
-
-class AuthorCreate(BaseModel):
+class AuthorAdd(BaseModel):
     name: str = Field(min_length=1, max_length=50)
-    books: list[BookCreate] = Field(default_factory=list)
+
+class AuthorAddRequest(AuthorAdd):
+    books: list[BookAddRequest] = Field(default_factory=list)
 
 class AuthorRead(BaseModel):
     id: int
