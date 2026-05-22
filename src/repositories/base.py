@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 
 
 class BaseRepository:
@@ -17,3 +17,8 @@ class BaseRepository:
         query = insert(self.model).values([item.model_dump() for item in data]).returning(self.model)
         result = await self.session.execute(query)
         return result.scalars().all()
+    
+    async def get_one_or_none(self, **filter_by) -> BaseModel:
+        query = select(self.model).filter_by(**filter_by)
+        query_result = await self.session.execute(query)
+        return query_result.scalars().one_or_none()

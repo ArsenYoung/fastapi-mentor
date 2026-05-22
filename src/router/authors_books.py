@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
 
+from src.exceptions import ObjectAlreadyExists
 from src.schemas.authors import AuthorAddRequest
 from src.services.authors_books import AuthorsBooksService, get_authors_books_service
 
@@ -28,5 +29,9 @@ async def post_author_with_books(
     ),
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ):
-    await service.create_author_with_books(data)
+    try:
+        await service.create_author_with_books(data)
+    except ObjectAlreadyExists:
+        raise HTTPException(status_code=409, detail="Автор с таким именем уже существует")
+    
     return {"status": "ok"}
