@@ -13,7 +13,7 @@ class AuthorsBooksService():
         self.authors_repo = AuthorsRepository(session)
         self.books_repo = BooksRepository(session)
     
-    async def create_author_with_books(self, data: AuthorAddRequest):
+    async def create_author_with_books(self, data: AuthorAddRequest) -> None:
         is_author_exists = await self.authors_repo.get_one_or_none(name=data.name)
         if is_author_exists:
             raise ObjectAlreadyExists
@@ -24,12 +24,18 @@ class AuthorsBooksService():
         ]
         await self.books_repo.add_bulk(books_data)
 
-    async def get_author_with_books(self, author_id: int):
+    async def get_author_with_books(self, author_id: int) -> Author:
         author_res = await self.authors_repo.get_one_or_none(id=author_id)
         if author_res is None:
             raise ObjectNotFound
         books_res = await self.books_repo.get_all(author_id=author_id)
         return build_author_response(author_res, books_res)
+    
+    async def del_author_with_books(self, author_id: int) -> None:
+        author_res = await self.authors_repo.get_one_or_none(id=author_id)
+        if author_res is None:
+            raise ObjectNotFound
+        await self.authors_repo.delete(id=author_id)
     
 async def get_authors_books_service():
     async with get_session() as session:

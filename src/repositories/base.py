@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from sqlalchemy import insert, select
+from sqlalchemy import delete, insert, select
 
 
 class BaseRepository:
@@ -32,3 +32,11 @@ class BaseRepository:
         
         result = await self.session.execute(query)
         return result.scalars().all()
+    
+    async def delete(self, *filter, **filter_by) -> None:
+        query = delete(self.model)
+        if filter:
+            query = query.filter(*filter)
+        if filter_by:
+            query = query.filter_by(**filter_by)
+        await self.session.execute(query)

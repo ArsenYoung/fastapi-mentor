@@ -46,3 +46,14 @@ async def get_author_with_books(
     except ObjectNotFound:
         raise HTTPException(status_code=404, detail="Автор не найден")
     return await service.get_author_with_books(author_id)
+
+@router.delete("/{author_id}", summary="Удалить автора и его книги", status_code=200)
+async def del_author_with_books(
+    author_id: int,
+    service: AuthorsBooksService = Depends(get_authors_books_service)
+):
+    try:
+        await service.del_author_with_books(author_id)
+    except ObjectNotFound:
+        raise HTTPException(status_code=404, detail="Автор не найден")
+    return {"status": "ok"}
