@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, Depends, HTTPException
 
 from src.exceptions import ObjectAlreadyExists, ObjectNotFound
-from src.schemas.authors import AuthorAddRequest, AuthorRead
+from src.schemas.authors import AuthorAddRequest, AuthorPatch, AuthorRead
 from src.services.authors_books import AuthorsBooksService, get_authors_books_service
 
 
@@ -54,6 +54,18 @@ async def del_author_with_books(
 ):
     try:
         await service.del_author_with_books(author_id)
+    except ObjectNotFound:
+        raise HTTPException(status_code=404, detail="Автор не найден")
+    return {"status": "ok"}
+
+@router.patch("/{author_id}", summary="Изменить данные автора", status_code=200)
+async def update_author_with_books(
+    author_id: int,
+    data: AuthorPatch,
+    service: AuthorsBooksService = Depends(get_authors_books_service),
+):
+    try:
+        await service.update_author_with_books(author_id, data)
     except ObjectNotFound:
         raise HTTPException(status_code=404, detail="Автор не найден")
     return {"status": "ok"}

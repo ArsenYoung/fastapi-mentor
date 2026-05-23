@@ -4,7 +4,7 @@ from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
 from src.repositories.authors import AuthorsRepository
 from src.repositories.books import BooksRepository
-from src.schemas.authors import Author, AuthorAddRequest
+from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch
 from src.schemas.books import Book, BookAdd
 
 
@@ -36,6 +36,27 @@ class AuthorsBooksService():
         if author_res is None:
             raise ObjectNotFound
         await self.authors_repo.delete(id=author_id)
+
+    async def update_author_with_books(self, author_id, data: AuthorPatch) -> None:
+        author_res = await self.authors_repo.get_one_or_none(id=author_id)
+        if author_res is None:
+            raise ObjectNotFound
+        author_data = data.model_dump(
+            exclude_unset=True,
+            exclude={"books"},
+        )
+        if author_data:
+            await self.authors_repo.update(author_data, id=author_id)
+
+        if data.books is not None:
+            for item in data.books:
+                book_data = item.model_dump(
+                    exclude_unset=True,
+                    exclude={"id"},
+                )
+                if not book_data:
+                    continue
+                await self.books_repo.update(item, id=item.id, author_id=author_id, exclude={"id"})
     
 async def get_authors_books_service():
     async with get_session() as session:

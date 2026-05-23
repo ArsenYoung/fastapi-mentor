@@ -15,3 +15,7 @@ class BookRead(BaseModel):
 
 class Book(BookRead):
     model_config = ConfigDict(from_attributes=True)
+
+class BookPatch(BaseModel):
+    id: int
+    title: str | None = None
