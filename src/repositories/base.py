@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import insert, select, update
 
 
 class BaseRepository:
@@ -19,43 +19,46 @@ class BaseRepository:
         return result.scalars().all()
     
     async def get_one_or_none(self, **filter_by) -> BaseModel | None:
-        query = select(self.model).filter_by(**filter_by)
+        query = select(self.model).filter_by(**filter_by, is_deleted=False)
         query_result = await self.session.execute(query)
         return query_result.scalars().one_or_none()
     
     async def get_all(self, *filter, **filter_by) -> list[BaseModel] | None:
         query = select(self.model)
         if filter:
-            query = query.filter(*filter)
+            query = query.filter(*filter, is_deleted=False)
         if filter_by:
-            query = query.filter_by(**filter_by)
+            query = query.filter_by(**filter_by, is_deleted=False)
         
         result = await self.session.execute(query)
         return result.scalars().all()
     
-    async def delete(self, *filter, **filter_by) -> None:
-        query = delete(self.model)
-        if filter:
-            query = query.filter(*filter)
-        if filter_by:
-            query = query.filter_by(**filter_by)
+    async def delete(self, **filter_by) -> None:
+        query = (
+            update(self.model)
+            .filter_by(**filter_by)
+            .values(is_deleted=True)
+        )
         await self.session.execute(query)
+
+    async def delete_bulk_by_ids(self, ids: list[int]) -> list[BaseModel]:
+        query = (
+            update(self.model)
+            .where(self.model.id.in_(ids))
+            .values(is_deleted=True)
+            .returning(self.model)
+        )
+        result = await self.session.execute(query)
+        return result.scalars().all()
 
     async def update(
         self,
-        data: BaseModel,
-        exclude_unset: bool = True,
-        exclude: set[str] | None = None,
+        data: dict,
         **filter_by,
     ) -> None:
         query = (
             update(self.model)
             .filter_by(**filter_by)
-            .values(
-                **data.model_dump(
-                    exclude_unset=exclude_unset,
-                    exclude=exclude or set(),
-                )
-            )
+            .values(**data)
         )
         await self.session.execute(query)

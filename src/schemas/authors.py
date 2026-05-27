@@ -7,6 +7,19 @@ class AuthorAdd(BaseModel):
 
 class AuthorAddRequest(AuthorAdd):
     books: list[BookAddRequest] = Field(default_factory=list)
+    model_config = ConfigDict(
+          json_schema_extra={
+              "examples": [
+                  {
+                      "name": "Лев Толстой",
+                      "books": [
+                          {"title": "Война и Мир"},
+                          {"title": "Воскресенье"},
+                      ],
+                  }
+              ]
+          }
+      )
 
 class AuthorRead(BaseModel):
     id: int
