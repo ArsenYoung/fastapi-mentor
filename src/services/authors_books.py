@@ -1,4 +1,4 @@
-from src.exceptions import AuthorConflictError, NotFoundError
+from src.exceptions import AuthorConflictError, AuthorNotFoundError
 from src.mappers.authors_books import build_author_response
 from src.repositories.authors import AuthorsRepository
 from src.repositories.books import BooksRepository
@@ -14,7 +14,7 @@ class AuthorsBooksService():
     async def _get_author(self, **filter_by) -> Author:
         author = await self.authors_repo.get_one_or_none(**filter_by)
         if author is None:
-            raise NotFoundError()
+            raise AuthorNotFoundError()
         return author
     
     async def _check_author_exist(self, **filter_by) -> None:

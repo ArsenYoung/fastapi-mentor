@@ -21,3 +21,13 @@ class AuthorNotFoundError(NotFoundError):
 class AuthorConflictError(ConflictError):
     code = "author_conflict_error"
     message = "Автор с таким именем уже существует"
+
+
+class PersonNotFoundError(NotFoundError):
+    code = "person_not_found_error"
+    message = "Человек не найден"
+
+
+class PassportConflictError(ConflictError):
+    code = "passport_conflict_error"
+    message = "Номер паспорта уже существует"

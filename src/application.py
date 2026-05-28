@@ -5,6 +5,7 @@ from starlette.middleware.cors import CORSMiddleware
 from src.exceptions import AppError, ConflictError, NotFoundError
 from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
+from src.router.persons_passports import router as persons_passports_router
 from src.schemas.errors import ErrorPayload, ErrorResponse
 
 
@@ -84,5 +85,6 @@ def get_app() -> FastAPI:
 
     app.include_router(healthcheck_router)
     app.include_router(authors_books_router)
+    app.include_router(persons_passports_router)
 
     return app

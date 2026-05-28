@@ -1,8 +1,8 @@
 """version 1
 
-Revision ID: b674345e4e9d
+Revision ID: 793206dadc21
 Revises:
-Create Date: 2026-05-25 16:54:18.203280
+Create Date: 2026-05-28 12:51:41.924191
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "b674345e4e9d"
+revision: str = "793206dadc21"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -62,8 +62,8 @@ def upgrade() -> None:
     op.create_table(
         "persons",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("first_name", sa.String(length=20), nullable=False),
-        sa.Column("last_name", sa.String(length=30), nullable=False),
+        sa.Column("first_name", sa.String(length=50), nullable=False),
+        sa.Column("last_name", sa.String(length=50), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -130,7 +130,8 @@ def upgrade() -> None:
     op.create_table(
         "passports",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("number", sa.String(length=15), nullable=False),
+        sa.Column("number", sa.String(length=10), nullable=False),
+        sa.Column("registrated_in", sa.String(length=200), nullable=False),
         sa.Column("person_id", sa.Integer(), nullable=False),
         sa.Column(
             "created_at",
@@ -147,6 +148,7 @@ def upgrade() -> None:
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["person_id"], ["persons.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("number"),
         sa.UniqueConstraint("person_id"),
     )
     # ### end Alembic commands ###

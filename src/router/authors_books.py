@@ -5,7 +5,7 @@ from src.schemas.authors import AuthorAddRequest, AuthorPatch, AuthorRead
 from src.services.authors_books import AuthorsBooksService
 
 
-router = APIRouter(prefix="/authors", tags=["Авторы и книги"])
+router = APIRouter(prefix="/authors", tags=["Авторы и книги 1-М"])
 
 
 @router.post("", summary="Добавить автора и его книги", status_code=201)

@@ -8,7 +8,8 @@ class PassportsOrm(Base):
     __tablename__ = "passports"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    number: Mapped[str] = mapped_column(String(15), nullable=False)
+    number: Mapped[str] = mapped_column(String(10), nullable=False, unique=True)
+    registrated_in: Mapped[str] = mapped_column(String(200), nullable=False)
     person_id: Mapped[int] = mapped_column(
         ForeignKey("persons.id", ondelete="CASCADE"),
         nullable=False,
