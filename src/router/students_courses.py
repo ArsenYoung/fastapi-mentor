@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from src.dependencies import get_students_courses_service
-from src.schemas.students import StudentAddRequest
+from src.schemas.students import StudentAddRequest, StudentPatch
 from src.services.students_courses import StudentsCoursesService
 
 
@@ -22,3 +22,20 @@ async def get_student_with_courses(
     service: StudentsCoursesService = Depends(get_students_courses_service)
 ):
     return await service.get_student_with_courses(student_id)
+
+@router.delete("{student_id}", summary="Удалить студента и его курсы", status_code=200)
+async def del_student_with_courses(
+    student_id: int,
+    service: StudentsCoursesService = Depends(get_students_courses_service)
+):
+    await service.del_student_with_courses(student_id)
+    return {"status": "ok"}
+
+@router.patch("{student_id}", summary="Обновить данные студента и его курсов", status_code=200)
+async def del_student_with_courses(
+    student_id: int,
+    data: StudentPatch,
+    service: StudentsCoursesService = Depends(get_students_courses_service)
+):
+    await service.update_student_with_courses(student_id, data)
+    return {"status": "ok"}
