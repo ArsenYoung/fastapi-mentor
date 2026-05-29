@@ -13,6 +13,7 @@ from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
 from src.models.persons import PersonsOrm
 from src.models.passports import PassportsOrm
+from src.models.students_courses import StudentsCoursesOrm
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

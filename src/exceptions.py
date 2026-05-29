@@ -31,3 +31,19 @@ class PersonNotFoundError(NotFoundError):
 class PassportConflictError(ConflictError):
     code = "passport_conflict_error"
     message = "Номер паспорта уже существует"
+
+class StudentNotFoundError(NotFoundError):
+    code = "student_not_found_error"
+    message = "Студент не найден"
+
+class CourseNotFoundError(NotFoundError):
+    code = "course_not_found_error"
+    message = "Курс не найден"
+
+class StudentConflictError(ConflictError):
+    code = "student_conflict_error"
+    message = "Студент уже существует"
+
+class CourseConflictError(ConflictError):
+    code = "course_conflict_error"
+    message = "Курс уже существует"

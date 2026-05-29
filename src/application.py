@@ -2,10 +2,11 @@ from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
-from src.exceptions import AppError, ConflictError, NotFoundError
+from src.exceptions import AppError, ConflictError, CourseConflictError, NotFoundError, StudentConflictError
 from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
 from src.router.persons_passports import router as persons_passports_router
+from src.router.students_courses import router as students_courses_router
 from src.schemas.errors import ErrorPayload, ErrorResponse
 
 
@@ -52,15 +53,27 @@ def get_app() -> FastAPI:
             details=getattr(exc, "details", None)
         )
     
-    @app.exception_handler(ConflictError)
-    async def conflict_handler(
+    @app.exception_handler(CourseConflictError)
+    async def course_conflict_handler(
         request: Request,
-        exc: ConflictError
+        exc: CourseConflictError
     ):
         return get_error_response(
             status_code=409,
-            code=getattr(exc, "code", "conflict_error"),
-            message=getattr(exc, "message", "Конфликт"),
+            code=getattr(exc, "code", "course_conflict_error"),
+            message=getattr(exc, "message", "Такой курс уже существует"),
+            details=getattr(exc, "details", None)
+        )
+    
+    @app.exception_handler(ConflictError)
+    async def student_conflict_handler(
+        request: Request,
+        exc: StudentConflictError
+    ):
+        return get_error_response(
+            status_code=409,
+            code=getattr(exc, "code", "student_conflict_error"),
+            message=getattr(exc, "message", "Такой студент уже существует"),
             details=getattr(exc, "details", None)
         )
     
@@ -86,5 +99,6 @@ def get_app() -> FastAPI:
     app.include_router(healthcheck_router)
     app.include_router(authors_books_router)
     app.include_router(persons_passports_router)
+    app.include_router(students_courses_router)
 
     return app

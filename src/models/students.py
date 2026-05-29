@@ -1,17 +1,27 @@
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Boolean, func
+from sqlalchemy import Index, String, DateTime, Boolean, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
-from src.models.courses_students import courses_students
 
 
 class StudentsOrm(Base):
     __tablename__ = "students"
 
+    __table_args__ = (
+        Index(
+            "uq_students_record_book_number_active",
+            "record_book_number",
+            unique=True,
+            postgresql_where=text("is_deleted = false")
+        ),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    first_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    record_book_number: Mapped[str] = mapped_column(String(8), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -28,9 +38,8 @@ class StudentsOrm(Base):
         nullable=False, 
         default=False
     )
-    courses: Mapped[list["CoursesOrm"]] = relationship(
-        "CoursesOrm",
-        secondary=courses_students,
+    course_link = relationship(
+        "StudentsCoursesOrm",
         back_populates="students",
-        passive_deletes=True,
+        cascade="all, delete-orphan"
     )

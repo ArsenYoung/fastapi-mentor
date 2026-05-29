@@ -1,18 +1,30 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, DateTime, Index, String, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
-from src.models.courses_students import courses_students
 
 
 class CoursesOrm(Base):
     __tablename__ = "courses"
 
+    __table_args__ = (
+        Index(
+            "uq_courses_reestr_number_active",
+            "reestr_number",
+            unique=True,
+            postgresql_where=text("is_deleted = false")
+        ),
+    )
+
     id: Mapped[int] = mapped_column(primary_key=True)
+    reestr_number: Mapped[str] = mapped_column(
+        String(4), 
+        nullable=False
+    )
     title: Mapped[str] = mapped_column(
-        String(60), 
+        String(150), 
         nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
@@ -31,9 +43,8 @@ class CoursesOrm(Base):
         nullable=False, 
         default=False
     )
-    students: Mapped[list["StudentsOrm"]] = relationship(
-        "StudentsOrm",
-        secondary=courses_students,
+    student_link = relationship(
+        "StudentsCoursesOrm",
         back_populates="courses",
-        passive_deletes=True,
+        cascade="all, delete-orphan",
     )
