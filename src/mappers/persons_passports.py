@@ -5,9 +5,9 @@ from src.schemas.persons import Person
 
 
 def build_person_response(person: PersonsOrm, passport: PassportsOrm):
-    return Person.model_validate({
-        "id": person.id,
-        "first_name": person.first_name,
-        "last_name": person.last_name,
-        "passport": Passport.model_validate(passport)
-    })
+    return Person(
+        id=person.id,
+        first_name=person.first_name,
+        last_name=person.last_name,
+        passport=Passport.model_validate(passport)
+    )
