@@ -1,20 +1,23 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+JSON_EXAMPLE_ADD_REQUEST = {
+    "examples": [
+        {
+            "number": "7799880044",
+            "registrated_in": "Moscow"
+        }
+    ]
+}
+
 
 class PassportAddRequest(BaseModel):
     number: str = Field(min_length=1, max_length=10)
     registrated_in: str = Field(min_length=1, max_length=200)
     model_config = ConfigDict(
-          json_schema_extra={
-              "examples": [
-                  {
-                      "number": "7799880044",
-                      "registrated_in": "Moscow"
-                  }
-              ]
-          }
-      )
-    
+        json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
+    )
+
+
 class PassportAdd(PassportAddRequest):
     person_id: int
 

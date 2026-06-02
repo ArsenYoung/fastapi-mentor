@@ -2,6 +2,32 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.passports import PassportAddRequest, PassportPatch, PassportRead
 
+JSON_EXAMPLE_ADD_REQUEST = {
+    "examples": [
+        {
+            "first_name": "Алексей",
+            "last_name": "Попов",
+            "passport": {
+                "number": "7788991010",
+                "registrated_in": "Москва"
+            }
+        }
+    ]
+}
+
+JSON_EXAMPLE_PATCH_REQUEST = {
+    "examples": [
+        {
+            "first_name": "Алексей",
+            "last_name": "Попов",
+            "passport": {
+                "number": "7788991010",
+                "registrated_in": "Москва"
+            }
+        }
+    ]
+}
+
 
 class PersonAdd(BaseModel):
     first_name: str = Field(min_length=1, max_length=50)
@@ -11,19 +37,8 @@ class PersonAdd(BaseModel):
 class PersonAddRequest(PersonAdd):
     passport: PassportAddRequest
     model_config = ConfigDict(
-          json_schema_extra={
-              "examples": [
-                  {
-                    "first_name": "Алексей",
-                    "last_name": "Попов",
-                    "passport": {
-                        "number": "7788991010",
-                        "registrated_in": "Москва"
-                    }
-                  }
-              ]
-          }
-      )
+        json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
+    )
 
 
 class PersonRead(BaseModel):
@@ -42,16 +57,5 @@ class PersonPatch(BaseModel):
     last_name: str | None = None
     passport: PassportPatch | None = None
     model_config = ConfigDict(
-          json_schema_extra={
-              "examples": [
-                  {
-                    "first_name": "Алексей",
-                    "last_name": "Попов",
-                    "passport": {
-                        "number": "7788991010",
-                        "registrated_in": "Москва"
-                    }
-                  }
-              ]
-          }
-      )
+        json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
+    )

@@ -1,11 +1,30 @@
+from datetime import datetime
+
 import sqlalchemy as sa
-from sqlalchemy.orm import DeclarativeMeta, declarative_base
+from sqlalchemy import Boolean, DateTime, func
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeMeta, declarative_base
 
 metadata = sa.MetaData()
 
 
 class BaseServiceModel:
-    """Базовый класс для таблиц сервиса."""
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
 
     @classmethod
     def on_conflict_constraint(cls) -> tuple | None:
