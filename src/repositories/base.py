@@ -3,8 +3,6 @@ from sqlalchemy import insert, select, update
 
 
 class BaseRepository:
-    model = None
-
     def __init__(self, session):
         self.session = session
 

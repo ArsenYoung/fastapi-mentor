@@ -17,16 +17,17 @@ class AuthorNotFoundError(NotFoundError):
     code = "author_not_found_error"
     message = "Автор не найден"
 
-
 class AuthorConflictError(ConflictError):
     code = "author_conflict_error"
     message = "Автор с таким именем уже существует"
-
 
 class PersonNotFoundError(NotFoundError):
     code = "person_not_found_error"
     message = "Человек не найден"
 
+class PassportNotFoundError(NotFoundError):
+    code = "passport_not_found_error"
+    message = "Паспорт не найден"
 
 class PassportConflictError(ConflictError):
     code = "passport_conflict_error"
