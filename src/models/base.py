@@ -2,9 +2,10 @@ from datetime import datetime
 
 import sqlalchemy as sa
 from sqlalchemy import Boolean, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeMeta, declarative_base
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeMeta, declarative_base, registry
 
 metadata = sa.MetaData()
+mapped_registry = registry(metadata=metadata)
 
 
 class BaseServiceModel:
@@ -31,4 +32,5 @@ class BaseServiceModel:
         return None
 
 
-Base: DeclarativeMeta = declarative_base(metadata=metadata, cls=BaseServiceModel)
+Base: DeclarativeMeta = mapped_registry.generate_base(cls=BaseServiceModel)
+AssociationBase = mapped_registry.generate_base()

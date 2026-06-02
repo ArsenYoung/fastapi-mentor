@@ -4,7 +4,7 @@ from src.schemas.passports import Passport
 from src.schemas.persons import Person
 
 
-def build_person_response(person: PersonsOrm, passport: PassportsOrm):
+def build_person_response(person: PersonsOrm, passport: PassportsOrm) -> Person:
     return Person(
         id=person.id,
         first_name=person.first_name,

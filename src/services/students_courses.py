@@ -15,6 +15,12 @@ class StudentsCoursesService():
         self.students_repo = StudentsRepository(session)
         self.courses_repo = CoursesRepository(session)
         self.students_courses_repo = StudentsCoursesRepository(session)
+
+    async def _get_student(self, **filter_by) -> Student:
+        student = await self.students_repo.get_one_or_none(**filter_by)
+        if student is None:
+            raise StudentNotFoundError()
+        return student
     
     async def create_student_with_courses(self, data: StudentAddRequest) -> None:
         try:
@@ -61,6 +67,7 @@ class StudentsCoursesService():
         await self.students_repo.delete(id=student_id)
         
     async def update_student_with_courses(self, student_id, data: StudentPatch) -> None:
+        await self._get_student(id=student_id)
         student_data = data.model_dump(
             exclude_unset=True,
             exclude={"courses"},

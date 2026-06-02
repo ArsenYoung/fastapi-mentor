@@ -4,7 +4,7 @@ from src.schemas.courses import Course
 from src.schemas.students import Student
 
 
-def build_student_response(student: StudentsOrm, courses: list[CoursesOrm]):
+def build_student_response(student: StudentsOrm, courses: list[CoursesOrm]) -> Student:
     return Student(
         id=student.id,
         first_name=student.first_name,

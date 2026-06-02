@@ -4,7 +4,7 @@ from src.schemas.authors import Author
 from src.schemas.books import Book
 
 
-def build_author_response(author: AuthorsOrm, books: list[BooksOrm]):
+def build_author_response(author: AuthorsOrm, books: list[BooksOrm]) -> Author:
     return Author(
         id=author.id,
         name=author.name,

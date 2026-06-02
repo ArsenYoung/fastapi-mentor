@@ -1,10 +1,10 @@
-from sqlalchemy import ForeignKey
+from sqlalchemy import Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.models.base import Base
+from src.models.base import AssociationBase
 
 
-class StudentsCoursesOrm(Base):
+class StudentsCoursesOrm(AssociationBase):
     __tablename__ = "students_courses"
 
     student_id: Mapped[int] = mapped_column(
@@ -14,6 +14,11 @@ class StudentsCoursesOrm(Base):
     course_id: Mapped[int] = mapped_column(
         ForeignKey("courses.id", ondelete="CASCADE"),
         primary_key=True
+    )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
     )
 
     students = relationship("StudentsOrm", back_populates="course_link")

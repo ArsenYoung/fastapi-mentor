@@ -1,8 +1,8 @@
 """version 1
 
-Revision ID: 021c48050394
+Revision ID: b7542e92d2d3
 Revises:
-Create Date: 2026-06-02 12:15:15.682117
+Create Date: 2026-06-02 14:43:30.145001
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "021c48050394"
+revision: str = "b7542e92d2d3"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -164,23 +164,10 @@ def upgrade() -> None:
         "students_courses",
         sa.Column("student_id", sa.Integer(), nullable=False),
         sa.Column("course_id", sa.Integer(), nullable=False),
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["course_id"], ["courses.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["student_id"], ["students.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("student_id", "course_id", "id"),
+        sa.PrimaryKeyConstraint("student_id", "course_id"),
     )
     # ### end Alembic commands ###
 
