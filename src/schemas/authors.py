@@ -4,7 +4,8 @@ from src.schemas.books import BookAddRequest, BookPatch, BookRead
 
 JSON_EXAMPLE = {"examples": [
     {
-        "name": "Лев Толстой",
+        "first_name": "Лев",
+        "last_name": "Толстой",
         "books": [
             {"title": "Война и Мир"},
             {"title": "Воскресенье"},
@@ -14,7 +15,8 @@ JSON_EXAMPLE = {"examples": [
 
 
 class AuthorAdd(BaseModel):
-    name: str = Field(min_length=1, max_length=50)
+    first_name: str = Field(min_length=1, max_length=50)
+    last_name: str = Field(min_length=1, max_length=50)
 
 
 class AuthorAddRequest(AuthorAdd):
@@ -26,7 +28,8 @@ class AuthorAddRequest(AuthorAdd):
 
 class AuthorRead(BaseModel):
     id: int
-    name: str
+    first_name: str
+    last_name: str
     books: list[BookRead] = Field(default_factory=list)
 
 
@@ -35,5 +38,6 @@ class Author(AuthorRead):
 
 
 class AuthorPatch(BaseModel):
-    name: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
     books: list[BookPatch] | None = None

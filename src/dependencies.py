@@ -1,4 +1,5 @@
 from src.db import get_session
+from src.repositories.authors_books import AuthorsBooksRepository
 from src.repositories.persons_passports import PersonsPassportsRepository
 from src.repositories.students_courses import StudentsCoursesRepository
 from src.services.authors_books import AuthorsBooksService
@@ -8,7 +9,7 @@ from src.services.students_courses import StudentsCoursesService
 
 async def get_authors_books_service():
     async with get_session() as session:
-        yield AuthorsBooksService(session)
+        yield AuthorsBooksService(AuthorsBooksRepository(session))
 
 async def get_persons_passports_service():
     async with get_session() as session:

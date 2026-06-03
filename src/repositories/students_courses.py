@@ -18,7 +18,7 @@ class StudentsCoursesRepository():
     def __init__(self, session):
         self.session = session
 
-    async def get_student(self, student_id: int) -> Student:
+    async def get_student(self, student_id: int) -> Student | None:
         student = await self.session.execute(
             select(StudentsOrm).filter_by(
                 id=student_id,

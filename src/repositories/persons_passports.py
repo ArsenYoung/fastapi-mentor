@@ -18,7 +18,7 @@ class PersonsPassportsRepository(BaseRepository):
     def __init__(self, session):
         self.session = session
 
-    async def get_person(self, person_id: int) -> Person:
+    async def get_person(self, person_id: int) -> Person | None:
         person = await self.session.execute(
             select(PersonsOrm).filter_by(
                 id=person_id,

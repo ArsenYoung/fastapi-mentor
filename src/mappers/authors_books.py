@@ -7,6 +7,7 @@ from src.schemas.books import Book
 def build_author_response(author: AuthorsOrm, books: list[BooksOrm]) -> Author:
     return Author(
         id=author.id,
-        name=author.name,
+        first_name=author.first_name,
+        last_name=author.last_name,
         books=[Book.model_validate(book) for book in books]
     )

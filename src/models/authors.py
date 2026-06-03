@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
@@ -6,10 +6,21 @@ from src.models.base import Base
 
 class AuthorsOrm(Base):
     __tablename__ = "authors"
+    __table_args__ = (
+        UniqueConstraint(
+            "first_name", 
+            "last_name",
+            name="uq_authors_first_name_last_name"
+        ),
+    )
 
-    name: Mapped[str] = mapped_column(
+    first_name: Mapped[str] = mapped_column(
         String(50),
-        nullable=False
+        nullable=False,
+    )
+    last_name: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
     )
     books: Mapped[list["BooksOrm"]] = relationship(
         "BooksOrm",
