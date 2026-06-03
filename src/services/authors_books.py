@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
 
 from src.exceptions import AuthorConflictError, AuthorNotFoundError, BookNotFoundError
-from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch
+from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch, AuthorsPage
 
 
 class AuthorsBooksService():
@@ -19,6 +19,15 @@ class AuthorsBooksService():
         if author is None:
             raise AuthorNotFoundError()
         return author
+    
+    async def get_all_authors_with_books(self, limit: int, offset: int) -> tuple[list[Author], int]:
+        items, total = await self.repo.get_all_authors_with_books(limit, offset)
+        return AuthorsPage(
+            items=items,
+            total=total,
+            limit=limit,
+            offset=offset
+        )
     
     async def del_author_with_books(self, author_id: int) -> None:
         is_deleted = await self.repo.del_author_with_books(author_id)

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 
 from sqlalchemy import select, update
@@ -43,7 +44,30 @@ class AuthorsBooksRepository(BaseRepository):
             BooksOrm,
             author_id=author.id,
         )
-        return build_author_response(author, books)   
+        return build_author_response(author, books)
+    
+    async def get_all_authors_with_books(self, limit: int, offset: int) -> tuple[list[Author], int]:
+        authors, total = await self.fetch_active_page(
+            AuthorsOrm,
+            limit=limit,
+            offset=offset,
+            order_by=AuthorsOrm.id
+        )
+        if not authors:
+            return [], total
+        
+        authors_ids = [author.id for author in authors]
+        books = await self.fetch_active_in(
+            BooksOrm,
+            BooksOrm.author_id,
+            authors_ids,
+            order_by=BooksOrm.id
+        )
+        books_by_author_id: dict[int, list[BooksOrm]] = defaultdict(list)
+        for book in books:
+            books_by_author_id[book.author_id].append(book)
+        result = [build_author_response(author, books_by_author_id[author.id]) for author in authors]
+        return result, total
 
     async def del_author_with_books(self, author_id: int) -> bool:
         author = await self.get_author(author_id)

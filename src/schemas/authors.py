@@ -41,3 +41,9 @@ class AuthorPatch(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     books: list[BookPatch] | None = None
+
+class AuthorsPage(BaseModel):
+    items: list[AuthorRead]
+    total: int
+    limit: int
+    offset: int

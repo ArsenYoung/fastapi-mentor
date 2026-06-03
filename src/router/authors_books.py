@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from src.dependencies import get_authors_books_service
-from src.schemas.authors import AuthorAddRequest, AuthorPatch, AuthorRead
+from src.schemas.authors import AuthorAddRequest, AuthorPatch, AuthorRead, AuthorsPage
 from src.schemas.common import CommonResponse
 from src.services.authors_books import AuthorsBooksService
 
@@ -23,6 +23,14 @@ async def get_author_with_books(
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ) -> AuthorRead:
     return await service.get_author_with_books(author_id)
+
+@router.get("", response_model=AuthorsPage, summary="Получить всех авторов и их книги", status_code=status.HTTP_200_OK)
+async def get_all_authors_with_books(
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    service: AuthorsBooksService = Depends(get_authors_books_service)
+):
+    return await service.get_all_authors_with_books(limit, offset)
 
 @router.delete("/{author_id}", summary="Удалить автора и его книги", status_code=status.HTTP_204_NO_CONTENT)
 async def del_author_with_books(
