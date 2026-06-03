@@ -1,62 +1,58 @@
-from pydantic import BaseModel
+from typing import Any, Generic, TypeVar
+
 from sqlalchemy import insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.models.base import BaseServiceModel
 
-class BaseRepository:
-    def __init__(self, session):
+ModelT = TypeVar("ModelT", bound=BaseServiceModel)
+
+class BaseRepository(Generic[ModelT]):
+    def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def add(self, data: BaseModel, exclude = {}) -> BaseModel:
-        query = insert(self.model).values(**data.model_dump(exclude=exclude)).returning(self.model)
-        result = await self.session.execute(query)
-        return result.scalars().one()
+    async def fetch_one(self, stmt) -> ModelT | None:
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
     
-    async def add_bulk(self, data: list[BaseModel]) -> list[BaseModel]:
-        query = insert(self.model).values([item.model_dump() for item in data]).returning(self.model)
-        result = await self.session.execute(query)
-        return result.scalars().all()
+    async def fetch_active_one(self, model: type[ModelT], **filters: Any) -> ModelT | None:
+        stmt = select(model).filter_by(**filters, is_deleted=False)
+        return await self.fetch_one(stmt)
     
-    async def get_one_or_none(self, **filter_by) -> BaseModel | None:
-        query = select(self.model).filter_by(**filter_by, is_deleted=False)
-        query_result = await self.session.execute(query)
-        return query_result.scalars().one_or_none()
+    async def fetch_all(self, stmt) -> list[ModelT]:
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
     
-    async def get_all(self, *filter, **filter_by) -> list[BaseModel] | None:
-        query = select(self.model)
-        if filter:
-            query = query.filter(*filter, is_deleted=False)
-        if filter_by:
-            query = query.filter_by(**filter_by, is_deleted=False)
+    async def fetch_active_all(self, model: type[ModelT], **filters: Any) -> list[ModelT]:
+        stmt = select(model).filter_by(**filters, is_deleted=False)
+        return await self.fetch_all(stmt)
+    
+    async def insert_instance(self, instance: ModelT) -> ModelT:
+        self.session.add(instance)
+        await self.session.flush()
+        return instance
+    
+    async def insert_returning(self, model: type[ModelT], values: dict[str, Any]) -> ModelT:
+        result = await self.session.execute(
+            insert(model)
+            .values(**values)
+            .returning(model)
+        )
+        return result.scalar_one()
+    
+    async def update_where(self, model: type[ModelT], values: dict[str, Any], **filters: Any) -> int:
+        result = await self.session.execute(
+            update(model)
+            .filter_by(**filters)
+            .values(values)
+        )
+        return result.rowcount or 0
+    
+    async def soft_delete_where(self, model: type[ModelT], **filters: Any) -> int:
+        return await self.update_where(
+            model, 
+            {"is_deleted": True},
+            **filters)
         
-        result = await self.session.execute(query)
-        return result.scalars().all()
+
     
-    async def delete(self, **filter_by) -> None:
-        query = (
-            update(self.model)
-            .filter_by(**filter_by)
-            .values(is_deleted=True)
-        )
-        await self.session.execute(query)
-
-    async def delete_bulk_by_ids(self, ids: list[int]) -> list[BaseModel]:
-        query = (
-            update(self.model)
-            .where(self.model.id.in_(ids))
-            .values(is_deleted=True)
-            .returning(self.model)
-        )
-        result = await self.session.execute(query)
-        return result.scalars().all()
-
-    async def update(
-        self,
-        data: dict,
-        **filter_by,
-    ) -> None:
-        query = (
-            update(self.model)
-            .filter_by(**filter_by)
-            .values(**data)
-        )
-        await self.session.execute(query)

@@ -7,15 +7,17 @@ class NotFoundError(AppError):
     code = "object_not_found_error"
     message = "Объект не найден"
 
-
 class ConflictError(AppError):
     code = "conflict_error"
     message = "Конфликт"
 
-
 class AuthorNotFoundError(NotFoundError):
     code = "author_not_found_error"
     message = "Автор не найден"
+
+class BookNotFoundError(NotFoundError):
+    code = "book_not_found_error"
+    message = "Книга не найдена"
 
 class AuthorConflictError(ConflictError):
     code = "author_conflict_error"

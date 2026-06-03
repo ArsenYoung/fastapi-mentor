@@ -1,6 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 
-from src.exceptions import AuthorConflictError, AuthorNotFoundError
+from src.exceptions import AuthorConflictError, AuthorNotFoundError, BookNotFoundError
 from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch
 
 
@@ -30,5 +30,9 @@ class AuthorsBooksService():
             result = await self.repo.update_author_with_books(author_id, data)
         except IntegrityError as exc:
             raise AuthorConflictError()
-        if not result:
+
+        if not result.author_found:
             raise AuthorNotFoundError()
+        
+        if not result.books_found:
+            raise BookNotFoundError()

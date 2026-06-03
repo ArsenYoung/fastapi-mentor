@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from sqlalchemy import select, update
 
 from src.mappers.authors_books import build_author_response
@@ -6,96 +8,94 @@ from src.models.books import BooksOrm
 from src.repositories.base import BaseRepository
 from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch
 
+@dataclass(slots=True)
+class UpdateAuthorsResult:
+    author_found: bool
+    books_found: bool
 
 class AuthorsBooksRepository(BaseRepository):
     def __init__(self, session):
         self.session = session
 
     async def get_author(self, author_id: int) -> Author | None:
-        author = await self.session.execute(
-            select(AuthorsOrm).filter_by(
-                id=author_id,
-                is_deleted=False
-            ))
-        author_response = author.scalar_one_or_none()
-        return author_response
+        return await self.fetch_active_one(AuthorsOrm, id=author_id)
 
     async def create_author_with_books(self, data: AuthorAddRequest) -> None:
-        author = AuthorsOrm(
-            first_name=data.first_name,
-            last_name=data.last_name
-        )
-        self.session.add(author)
-        await self.session.flush()
-
-        for item in data.books:
-            book = BooksOrm(
-                author_id=author.id,
-                title=item.title,
+        author = await self.insert_instance(
+            AuthorsOrm(
+                first_name=data.first_name,
+                last_name=data.last_name,
             )
-            self.session.add(book)
+        )
+        for item in data.books:
+            await self.insert_instance(
+                BooksOrm(
+                    author_id=author.id,
+                    title=item.title,
+                )
+            )
 
     async def get_author_with_books(self, author_id: int) -> Author | None:
         author = await self.get_author(author_id)
-
         if author is None:
             return None
-        
-        books_data = await self.session.execute(
-            select(BooksOrm).filter_by(
-                author_id=author.id
-            ))
-        
-        books = books_data.scalars().all()
-
+        books = await self.fetch_active_all(
+            BooksOrm,
+            author_id=author.id,
+        )
         return build_author_response(author, books)   
 
     async def del_author_with_books(self, author_id: int) -> bool:
         author = await self.get_author(author_id)
-
         if author is None:
             return False
-        
-        await self.session.execute(
-            update(AuthorsOrm)
-            .filter_by(id=author.id)
-            .values(is_deleted=True)
+        await self.soft_delete_where(
+            AuthorsOrm,
+            id=author.id,
         )
-
-        await self.session.execute(
-            update(BooksOrm)
-            .filter_by(author_id=author_id)
-            .values(is_deleted=True)
+        await self.soft_delete_where(
+            BooksOrm,
+            author_id=author.id,
         )
-
         return True
 
     async def update_author_with_books(self, author_id: int, data: AuthorPatch) -> bool:
         author = await self.get_author(author_id)
-
         if author is None:
-            return False
-        
-        author_data = data.model_dump(
-            exclude_unset=True,
-            exclude={"books"},
-        )
-
-        if author_data:
-            await self.session.execute(
-                update(AuthorsOrm)
-                .filter_by(id=author_id)
-                .values(**author_data)
+            return UpdateAuthorsResult(
+                author_found=False,
+                books_found=False,
             )
-
+        await self.update_where(
+            AuthorsOrm,
+            data.model_dump(
+                exclude_unset=True,
+                exclude={"books"},
+            ),
+            id=author_id,
+        )
         if data.books is not None:
             for item in data.books:
-                await self.session.execute(
-                    update(BooksOrm)
-                    .filter_by(id=item.id)
-                    .values(title=item.title)
+                exists_book = await self.fetch_active_one(
+                    BooksOrm,
+                    id=item.id,
+                    author_id=author_id,
+                )
+                if exists_book is None:
+                    return UpdateAuthorsResult(
+                        author_found=True,
+                        books_found=False,
+                    )
+                
+                await self.update_where(
+                    BooksOrm,
+                    item.model_dump(exclude_unset=True),
+                    id=item.id,
                 )
 
-        return True
+        return UpdateAuthorsResult(
+            author_found=True,
+            books_found=True,
+        )
 
 
