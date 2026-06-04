@@ -4,11 +4,11 @@ from src.schemas.books import BookAddRequest, BookPatch, BookRead
 
 JSON_EXAMPLE = {"examples": [
     {
-        "first_name": "Лев",
-        "last_name": "Толстой",
+        "first_name": "Leo",
+        "last_name": "Tolstoy",
         "books": [
-            {"title": "Война и Мир"},
-            {"title": "Воскресенье"},
+            {"title": "War and Peace"},
+            {"title": "Sunday"},
         ],
     }
 ]}

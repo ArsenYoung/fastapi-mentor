@@ -1,8 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-
 from sqlalchemy import select
-
 from src.mappers.students_courses import build_student_response
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm

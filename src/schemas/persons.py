@@ -5,11 +5,11 @@ from src.schemas.passports import PassportAddRequest, PassportPatch, PassportRea
 JSON_EXAMPLE_ADD_REQUEST = {
     "examples": [
         {
-            "first_name": "Алексей",
-            "last_name": "Попов",
+            "first_name": "Alexey",
+            "last_name": "Popov",
             "passport": {
                 "number": "7788991010",
-                "registrated_in": "Москва"
+                "registrated_in": "Moscow"
             }
         }
     ]
@@ -18,11 +18,11 @@ JSON_EXAMPLE_ADD_REQUEST = {
 JSON_EXAMPLE_PATCH_REQUEST = {
     "examples": [
         {
-            "first_name": "Алексей",
-            "last_name": "Попов",
+            "first_name": "Alexey",
+            "last_name": "Popov",
             "passport": {
                 "number": "7788991010",
-                "registrated_in": "Москва"
+                "registrated_in": "Moscow"
             }
         }
     ]

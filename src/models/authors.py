@@ -1,6 +1,5 @@
 from sqlalchemy import String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from src.models.base import Base
 
 

@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
-from src.exceptions.books import BookNotFoundError
+from src.exceptions.already_exists_exception import AlreadyExistsException
+from src.exceptions.object_not_found_exception import ObjectNotFoundException
 from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch, AuthorsPage
-from src.schemas.errors import AuthorConflictError, AuthorNotFoundError
 
 
 class AuthorsBooksService():
@@ -11,13 +11,13 @@ class AuthorsBooksService():
     async def create_author_with_books(self, data: AuthorAddRequest) -> None:
         try:
             await self.repo.create_author_with_books(data)
-        except IntegrityError as exc:
-            raise AuthorConflictError from exc
+        except IntegrityError:
+            raise AlreadyExistsException("An author with this name already exists")
 
     async def get_author_with_books(self, author_id: int) -> Author:
         author = await self.repo.get_author_with_books(author_id)
         if author is None:
-            raise AuthorNotFoundError()
+            raise ObjectNotFoundException("Author not found")
         return author
     
     async def get_all_authors_with_books(self, limit: int, offset: int) -> tuple[list[Author], int]:
@@ -32,16 +32,16 @@ class AuthorsBooksService():
     async def del_author_with_books(self, author_id: int) -> None:
         is_deleted = await self.repo.del_author_with_books(author_id)
         if not is_deleted:
-            raise AuthorNotFoundError() 
+            raise ObjectNotFoundException("Author not found")
 
     async def update_author_with_books(self, author_id, data: AuthorPatch) -> None:
         try:
             result = await self.repo.update_author_with_books(author_id, data)
-        except IntegrityError as exc:
-            raise AuthorConflictError()
+        except IntegrityError:
+            raise AlreadyExistsException("An author with this name already exists")
 
         if not result.author_found:
-            raise AuthorNotFoundError()
+            raise ObjectNotFoundException("Author not found")
         
         if not result.books_found:
-            raise BookNotFoundError()
+            raise ObjectNotFoundException("Book not found")

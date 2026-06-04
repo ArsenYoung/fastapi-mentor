@@ -5,17 +5,17 @@ from src.schemas.courses import CourseAddRequest, CoursePatch, CourseRead
 JSON_EXAMPLE_ADD_REQUEST = {
     "examples": [
         {
-            "first_name": "Алексей",
-            "last_name": "Попов",
+            "first_name": "Alexey",
+            "last_name": "Popov",
             "record_book_number": "212866",
             "courses": [
                 {
                     "reestr_number": "2MMI",
-                    "title": "Машиностроение",
+                    "title": "Mechanical Engineering",
                 },
                 {
                     "reestr_number": "ICBN",
-                    "title": "Информатика",
+                    "title": "Computer Science",
                 },
             ]
         }
@@ -25,17 +25,17 @@ JSON_EXAMPLE_ADD_REQUEST = {
 JSON_EXAMPLE_PATCH_REQUEST = {
     "examples": [
         {
-            "first_name": "Алексей",
-            "last_name": "Попов",
+            "first_name": "Alexey",
+            "last_name": "Popov",
             "record_book_number": "212866",
             "courses": [
                 {
                     "reestr_number": "2MMI",
-                    "title": "Машиностроение",
+                    "title": "Mechanical Engineering",
                 },
                 {
                     "reestr_number": "ICBN",
-                    "title": "Информатика",
+                    "title": "Computer Science",
                 },
             ]
         }

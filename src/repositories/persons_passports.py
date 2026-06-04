@@ -1,7 +1,4 @@
 from dataclasses import dataclass
-
-from sqlalchemy import select, update
-
 from src.mappers.persons_passports import build_person_response
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm

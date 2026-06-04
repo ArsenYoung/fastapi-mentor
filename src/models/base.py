@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import sqlalchemy as sa
 from sqlalchemy import Boolean, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeMeta, declarative_base, registry

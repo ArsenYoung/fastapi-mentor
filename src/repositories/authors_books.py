@@ -1,8 +1,5 @@
 from collections import defaultdict
 from dataclasses import dataclass
-
-from sqlalchemy import select, update
-
 from src.mappers.authors_books import build_author_response
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm

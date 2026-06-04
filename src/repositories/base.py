@@ -1,8 +1,6 @@
 from typing import Any, Generic, Iterable, TypeVar
-
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.models.base import BaseServiceModel
 
 ModelT = TypeVar("ModelT", bound=BaseServiceModel)

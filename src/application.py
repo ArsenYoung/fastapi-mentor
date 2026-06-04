@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
-from src.exceptions.base import AppError, ConflictError, NotFoundError
-from src.exceptions.courses import CourseConflictError
-from src.exceptions.students import StudentConflictError
+from src.exceptions.already_exists_exception import AlreadyExistsException
+from src.exceptions.app_exception import AppException
+from src.exceptions.object_not_found_exception import ObjectNotFoundException
 from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
 from src.router.persons_passports import router as persons_passports_router
@@ -42,51 +42,51 @@ def get_app() -> FastAPI:
         default_response_class=JSONResponse,
     )
 
-    @app.exception_handler(NotFoundError)
+    @app.exception_handler(ObjectNotFoundException)
     async def not_found_handler(
         request: Request,
-        exc: NotFoundError
+        exc: ObjectNotFoundException
     ):
         return get_error_response(
             status_code=404,
-            code=getattr(exc, "code", "not_found_error"),
-            message=getattr(exc, "message", "Объект не найден"),
+            code=getattr(exc, "code", "object_not_found_exception"),
+            message=getattr(exc, "message", "Object not found"),
             details=getattr(exc, "details", None)
         )
     
-    @app.exception_handler(CourseConflictError)
+    @app.exception_handler(AlreadyExistsException)
     async def course_conflict_handler(
         request: Request,
-        exc: CourseConflictError
+        exc: AlreadyExistsException
     ):
         return get_error_response(
             status_code=409,
-            code=getattr(exc, "code", "course_conflict_error"),
-            message=getattr(exc, "message", "Такой курс уже существует"),
+            code=getattr(exc, "code", "already_exists_exception"),
+            message=getattr(exc, "message", "This object already exists"),
             details=getattr(exc, "details", None)
         )
     
-    @app.exception_handler(ConflictError)
+    @app.exception_handler(AlreadyExistsException)
     async def student_conflict_handler(
         request: Request,
-        exc: StudentConflictError
+        exc: AlreadyExistsException
     ):
         return get_error_response(
             status_code=409,
-            code=getattr(exc, "code", "student_conflict_error"),
-            message=getattr(exc, "message", "Такой студент уже существует"),
+            code=getattr(exc, "code", "already_exists_exception"),
+            message=getattr(exc, "message", "A student with this record book number already exists"),
             details=getattr(exc, "details", None)
         )
     
-    @app.exception_handler(AppError)
+    @app.exception_handler(AppException)
     async def unexpected_error_handler(
         request: Request,
-        exc: AppError
+        exc: AppException
     ):
         return get_error_response(
             status_code=500,
             code="unexpected_error",
-            message="Внутренняя ошибка сервера",
+            message="Unexpected error",
         )
 
     app.add_middleware(

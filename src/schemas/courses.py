@@ -4,11 +4,11 @@ JSON_EXAMPLE_ADD_REQUEST = {
     "examples": [
         {
             "reestr_number": "2MMI",
-            "title": "Машиностроение",
+            "title": "Mechanical Engineering",
         },
         {
             "reestr_number": "ICBN",
-            "title": "Информатика",
+            "title": "Computer Science",
         },
     ]
 }
@@ -17,11 +17,11 @@ JSON_EXAMPLE_PATCH_REQUEST = {
     "examples": [
         {
             "reestr_number": "2MMI",
-            "title": "Машиностроение",
+            "title": "Mechanical Engineering",
         },
         {
             "reestr_number": "ICBN",
-            "title": "Информатика",
+            "title": "Computer Science",
         },
     ]
 }
