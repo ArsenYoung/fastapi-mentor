@@ -45,7 +45,27 @@ class PersonsPassportsRepository(BaseRepository):
             person_id=person.id,
         )
         return build_person_response(person, passport)
-
+    
+    async def get_all_persons_with_passports(self, limit: int, offset: int) -> tuple[list[Person], int]:
+        persons, total = await self.fetch_active_page(
+            PersonsOrm,
+            limit=limit,
+            offset=offset,
+            order_by=PersonsOrm.id
+        )
+        if not persons:
+            return [], total
+        
+        persons_ids = [person.id for person in persons]
+        passports = await self.fetch_active_in(
+            PassportsOrm,
+            PassportsOrm.person_id,
+            persons_ids,
+            order_by=PassportsOrm.id
+        )
+        passports_by_person_id = {passport.person_id: passport for passport in passports}
+        result = [build_person_response(person, passports_by_person_id[person.id]) for person in persons]
+        return result, total
 
     async def del_person_with_passport(self, person_id: int) -> bool:
         person = await self.get_person(person_id)

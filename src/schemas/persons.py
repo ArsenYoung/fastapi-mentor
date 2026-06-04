@@ -59,3 +59,9 @@ class PersonPatch(BaseModel):
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )
+
+class PersonPage(BaseModel):
+    items: list[PersonRead]
+    total: int
+    limit: int
+    offset: int

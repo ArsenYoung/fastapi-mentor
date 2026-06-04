@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from src.dependencies import get_persons_passports_service
 from src.schemas.common import CommonResponse
-from src.schemas.persons import PersonAddRequest, PersonPatch, PersonRead
+from src.schemas.persons import PersonAddRequest, PersonPage, PersonPatch, PersonRead
 from src.services.persons_passports import PersonsPassportsService
 
 
@@ -23,6 +23,14 @@ async def get_person_with_passport(
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> PersonRead:
     return await service.get_person_with_passport(person_id)
+
+@router.get("", response_model=PersonPage, summary="Получить людей и их пасспортные данные", status_code=status.HTTP_200_OK)
+async def get_all_persons_with_passports(
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    service: PersonsPassportsService = Depends(get_persons_passports_service),
+) -> PersonPage:
+    return await service.get_all_persons_with_passports(limit, offset)
 
 @router.delete("/{person_id}", summary="Удалить человека и его пасспортные данные", status_code=status.HTTP_204_NO_CONTENT)
 async def del_person_with_passport(
