@@ -1,6 +1,6 @@
 from sqlalchemy.exc import IntegrityError
-
-from src.exceptions import PassportConflictError, PassportNotFoundError, PersonNotFoundError
+from src.exceptions.passports import PassportConflictError, PassportNotFoundError
+from src.exceptions.persons import PersonNotFoundError
 from src.schemas.persons import Person, PersonAddRequest, PersonPage, PersonPatch
 
 

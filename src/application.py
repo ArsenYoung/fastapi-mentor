@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
-
-from src.exceptions import AppError, ConflictError, CourseConflictError, NotFoundError, StudentConflictError
+from src.exceptions.base import AppError, ConflictError, NotFoundError
+from src.exceptions.courses import CourseConflictError
+from src.exceptions.students import StudentConflictError
 from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
 from src.router.persons_passports import router as persons_passports_router

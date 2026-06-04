@@ -1,7 +1,7 @@
 from sqlalchemy.exc import IntegrityError
-
-from src.exceptions import AuthorConflictError, AuthorNotFoundError, BookNotFoundError
+from src.exceptions.books import BookNotFoundError
 from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch, AuthorsPage
+from src.schemas.errors import AuthorConflictError, AuthorNotFoundError
 
 
 class AuthorsBooksService():

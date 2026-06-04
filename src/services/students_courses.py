@@ -1,5 +1,6 @@
 from sqlalchemy.exc import IntegrityError
-from src.exceptions import CourseNotFoundError, StudentConflictError, StudentNotFoundError
+from src.exceptions.courses import CourseNotFoundError
+from src.exceptions.students import StudentConflictError, StudentNotFoundError
 from src.schemas.students import Student, StudentAddRequest, StudentPatch, StudentsPage
 
 
