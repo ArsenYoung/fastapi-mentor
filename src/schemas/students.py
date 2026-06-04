@@ -73,3 +73,9 @@ class StudentPatch(BaseModel):
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )
+
+class StudentsPage(BaseModel):
+    items: list[StudentRead]
+    total: int
+    limit: int
+    offset: int

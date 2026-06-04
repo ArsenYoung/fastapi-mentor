@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from src.dependencies import get_students_courses_service
 from src.schemas.common import CommonResponse
-from src.schemas.students import StudentAddRequest, StudentPatch, StudentRead
+from src.schemas.students import StudentAddRequest, StudentPatch, StudentRead, StudentsPage
 from src.services.students_courses import StudentsCoursesService
 
 
@@ -23,6 +23,14 @@ async def get_student_with_courses(
     service: StudentsCoursesService = Depends(get_students_courses_service)
 ) -> StudentRead:
     return await service.get_student_with_courses(student_id)
+
+@router.get("", summary="Получить студентов и их курсы", response_model=StudentsPage, status_code=status.HTTP_200_OK)
+async def get_all_students_with_courses(
+    limit: int = Query(10, ge=1),
+    offset: int = Query(0, ge=0),
+    service: StudentsCoursesService = Depends(get_students_courses_service)
+):
+    return await service.get_all_students_with_courses(limit, offset)
 
 @router.delete("{student_id}", summary="Удалить студента и его курсы", status_code=status.HTTP_204_NO_CONTENT)
 async def del_student_with_courses(

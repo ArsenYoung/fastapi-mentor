@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -131,6 +132,51 @@ class StudentsCoursesRepository(BaseRepository):
                 courses.append(course)
 
         return build_student_response(student, courses)
+    
+    async def get_all_students_with_courses(self, limit: int, offset: int) -> tuple[list[Student], int]:
+        students, total = await self.fetch_active_page(
+            StudentsOrm,
+            limit=limit,
+            offset=offset,
+            order_by=StudentsOrm.id
+        )
+        if not students:
+            return [], total
+        
+        students_ids = [student.id for student in students]
+        links = await self.fetch_active_in(
+            StudentsCoursesOrm,
+            StudentsCoursesOrm.student_id,
+            students_ids,
+        )
+
+        links_by_student_id: dict[int, list[StudentsCoursesOrm]] = defaultdict(list)
+        for link in links:
+            links_by_student_id[link.student_id].append(link)
+
+        course_ids = {link.course_id for link in links}
+        courses = await self.fetch_active_in(
+            CoursesOrm,
+            CoursesOrm.id,
+            course_ids,
+            order_by=CoursesOrm.id,
+        )
+
+        courses_by_id = {course.id: course for course in courses}
+
+        result: list[Student] = []
+
+        for student in students:
+            student_links = links_by_student_id.get(student.id, [])
+            student_courses = []
+
+            for link in student_links:
+                course = courses_by_id.get(link.course_id)
+                if course:
+                    student_courses.append(course)
+            result.append(build_student_response(student, student_courses))
+        
+        return result, total
 
     async def del_student_with_courses(self, student_id: int) -> bool:
         student = await self.get_student(student_id)

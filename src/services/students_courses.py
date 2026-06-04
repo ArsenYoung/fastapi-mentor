@@ -1,6 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 from src.exceptions import CourseNotFoundError, StudentConflictError, StudentNotFoundError
-from src.schemas.students import Student, StudentAddRequest, StudentPatch
+from src.schemas.students import Student, StudentAddRequest, StudentPatch, StudentsPage
 
 
 class StudentsCoursesService():
@@ -18,6 +18,15 @@ class StudentsCoursesService():
         if student is None:
             raise StudentNotFoundError()
         return student
+    
+    async def get_all_students_with_courses(self, limit: int, offset: int) -> StudentsPage:
+        items, total = await self.repo.get_all_students_with_courses(limit, offset)
+        return StudentsPage(
+            items=items,
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
         
     async def del_student_with_courses(self, student_id: int) -> None:
         is_deleted = await self.repo.del_student_with_courses(student_id)
