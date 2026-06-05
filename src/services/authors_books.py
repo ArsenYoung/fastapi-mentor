@@ -4,7 +4,6 @@ from sqlalchemy.exc import IntegrityError
 
 from src.exceptions.already_exists_exception import AlreadyExistsException
 from src.exceptions.object_not_found_exception import ObjectNotFoundException
-from src.mappers.authors_books import build_author_response
 from src.repositories.authors_books import AuthorsBooksRepository
 from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch, AuthorsPage
 
@@ -51,7 +50,8 @@ class AuthorsBooksService:
             raise ObjectNotFoundException("Author not found")
 
         books = await self.repo.get_books_by_author(author_id)
-        return build_author_response(author, books)
+        author.books = books
+        return Author.model_validate(author)
 
     async def get_all_authors_with_books(self, limit: int, offset: int) -> AuthorsPage:
         authors, total = await self.repo.get_authors_page(limit, offset)
@@ -70,10 +70,10 @@ class AuthorsBooksService:
         for book in books:
             books_by_author_id[book.author_id].append(book)
 
-        items = [
-            build_author_response(author, books_by_author_id.get(author.id, []))
-            for author in authors
-        ]
+        items: list[Author] = []
+        for author in authors:
+            author.books = books_by_author_id.get(author.id, [])
+            items.append(Author.model_validate(author))
 
         return AuthorsPage(
             items=items,

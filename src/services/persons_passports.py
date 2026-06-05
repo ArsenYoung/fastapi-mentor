@@ -2,7 +2,6 @@ from sqlalchemy.exc import IntegrityError
 
 from src.exceptions.already_exists_exception import AlreadyExistsException
 from src.exceptions.object_not_found_exception import ObjectNotFoundException
-from src.mappers.persons_passports import build_person_response
 from src.repositories.persons_passports import PersonsPassportsRepository
 from src.schemas.persons import Person, PersonAddRequest, PersonPage, PersonPatch
 
@@ -34,21 +33,24 @@ class PersonsPassportsService:
         if passport is None:
             raise ObjectNotFoundException("Passport not found")
 
-        return build_person_response(person, passport)
+        person.passport = passport
+        return Person.model_validate(person)
 
     async def get_all_persons_with_passports(self, limit: int, offset: int) -> PersonPage:
         persons, total = await self.repo.get_persons_page(limit, offset)
         items=[]
         if persons:
             person_ids = [person.id for person in persons]
-            passports = await self.repo.get_passports_by_person_ids(person_ids)
-            passports_by_person_id = {passport.person_id: passport for passport in passports}
+        passports = await self.repo.get_passports_by_person_ids(person_ids)
+        passports_by_person_id = {passport.person_id: passport for passport in passports}
 
-            items = [
-                build_person_response(person, passports_by_person_id[person.id])
-                for person in persons
-                if person.id in passports_by_person_id
-            ]
+        items: list[Person] = []
+        for person in persons:
+            passport = passports_by_person_id.get(person.id)
+            if passport is None:
+                continue
+            person.passport = passport
+            items.append(Person.model_validate(person))
 
         return PersonPage(
             items=items,

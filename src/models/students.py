@@ -24,3 +24,11 @@ class StudentsOrm(Base):
         back_populates="students",
         cascade="all, delete-orphan"
     )
+
+    @property
+    def courses(self) -> list:
+        return [
+            link.courses
+            for link in self.course_link
+            if not link.is_deleted and link.courses is not None and not link.courses.is_deleted
+        ]

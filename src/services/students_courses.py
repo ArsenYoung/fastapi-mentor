@@ -4,7 +4,6 @@ from sqlalchemy.exc import IntegrityError
 
 from src.exceptions.already_exists_exception import AlreadyExistsException
 from src.exceptions.object_not_found_exception import ObjectNotFoundException
-from src.mappers.students_courses import build_student_response
 from src.repositories.students_courses import StudentsCoursesRepository
 from src.schemas.courses import CourseAddRequest, CoursePatch
 from src.schemas.students import Student, StudentAddRequest, StudentPatch, StudentsPage
@@ -80,7 +79,11 @@ class StudentsCoursesService:
         links = await self.repo.get_student_links(student_id)
         course_ids = [link.course_id for link in links]
         courses = await self.repo.get_courses_by_ids(course_ids)
-        return build_student_response(student, courses)
+        courses_by_id = {course.id: course for course in courses}
+        for link in links:
+            link.courses = courses_by_id.get(link.course_id)
+        student.course_link = links
+        return Student.model_validate(student)
 
     async def get_all_students_with_courses(self, limit: int, offset: int) -> StudentsPage:
         students, total = await self.repo.get_students_page(limit, offset)
@@ -105,12 +108,11 @@ class StudentsCoursesService:
 
         items: list[Student] = []
         for student in students:
-            student_courses = []
-            for link in links_by_student_id.get(student.id, []):
-                course = courses_by_id.get(link.course_id)
-                if course is not None:
-                    student_courses.append(course)
-            items.append(build_student_response(student, student_courses))
+            student_links = links_by_student_id.get(student.id, [])
+            for link in student_links:
+                link.courses = courses_by_id.get(link.course_id)
+            student.course_link = student_links
+            items.append(Student.model_validate(student))
 
         return StudentsPage(
             items=items,
