@@ -46,8 +46,8 @@ class Course(CourseRead):
 
 
 class CoursePatch(BaseModel):
-    reestr_number: str
-    title: str
+    reestr_number: str | None = None
+    title: str | None = None
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )

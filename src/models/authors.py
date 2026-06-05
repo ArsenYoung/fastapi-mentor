@@ -1,4 +1,4 @@
-from sqlalchemy import String, UniqueConstraint
+from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base
 
@@ -6,13 +6,18 @@ from src.models.base import Base
 class AuthorsOrm(Base):
     __tablename__ = "authors"
     __table_args__ = (
-        UniqueConstraint(
-            "first_name", 
-            "last_name",
-            name="uq_authors_first_name_last_name"
+        Index(
+            "uq_authors_author_code_active",
+            "author_code",
+            unique=True,
+            postgresql_where=text("is_deleted = false"),
         ),
     )
 
+    author_code: Mapped[str] = mapped_column(
+        String(6),
+        nullable=False,
+    )
     first_name: Mapped[str] = mapped_column(
         String(50),
         nullable=False,

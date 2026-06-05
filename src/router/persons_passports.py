@@ -6,7 +6,7 @@ from src.schemas.persons import PersonAddRequest, PersonPage, PersonPatch, Perso
 from src.services.persons_passports import PersonsPassportsService
 
 
-router = APIRouter(prefix="/persons", tags=["People and Passports 1-1"])
+router = APIRouter(prefix="/persons", tags=["Persons and Passports 1-1"])
 
 
 @router.post("", summary="Create a person with passport data", status_code=status.HTTP_201_CREATED)
@@ -26,7 +26,7 @@ async def get_person_with_passport(
 
 @router.get("", response_model=PersonPage, summary="Get people and their passport data", status_code=status.HTTP_200_OK)
 async def get_all_persons_with_passports(
-    limit: int = Query(10, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> PersonPage:

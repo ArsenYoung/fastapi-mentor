@@ -26,7 +26,7 @@ async def get_author_with_books(
 
 @router.get("", response_model=AuthorsPage, summary="Get all authors and their books", status_code=status.HTTP_200_OK)
 async def get_all_authors_with_books(
-    limit: int = Query(10, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ):

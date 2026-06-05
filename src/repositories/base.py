@@ -92,7 +92,8 @@ class BaseRepository(Generic[ModelT]):
         return await self.update_where(
             model, 
             {"is_deleted": True},
-            **filters)
+            **filters
+        )
         
 
     

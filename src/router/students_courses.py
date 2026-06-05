@@ -26,7 +26,7 @@ async def get_student_with_courses(
 
 @router.get("", summary="Get students and their courses", response_model=StudentsPage, status_code=status.HTTP_200_OK)
 async def get_all_students_with_courses(
-    limit: int = Query(10, ge=1),
+    limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     service: StudentsCoursesService = Depends(get_students_courses_service)
 ):

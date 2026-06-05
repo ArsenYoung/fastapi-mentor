@@ -55,19 +55,7 @@ def get_app() -> FastAPI:
         )
     
     @app.exception_handler(AlreadyExistsException)
-    async def course_conflict_handler(
-        request: Request,
-        exc: AlreadyExistsException
-    ):
-        return get_error_response(
-            status_code=409,
-            code=getattr(exc, "code", "already_exists_exception"),
-            message=getattr(exc, "message", "This object already exists"),
-            details=getattr(exc, "details", None)
-        )
-    
-    @app.exception_handler(AlreadyExistsException)
-    async def student_conflict_handler(
+    async def already_exists_handler(
         request: Request,
         exc: AlreadyExistsException
     ):

@@ -1,116 +1,75 @@
-from dataclasses import dataclass
-from src.mappers.persons_passports import build_person_response
+from collections.abc import Iterable
+
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
 from src.repositories.base import BaseRepository
-from src.schemas.persons import Person, PersonAddRequest, PersonPatch
 
-@dataclass(slots=True)
-class UpdatePersonResult:
-    person_found: bool
-    passport_found: bool
-    
 
 class PersonsPassportsRepository(BaseRepository):
     def __init__(self, session):
         self.session = session
 
-    async def get_person(self, person_id: int) -> Person | None:
+    async def get_person(self, person_id: int) -> PersonsOrm | None:
         return await self.fetch_active_one(PersonsOrm, id=person_id)
 
-    async def create_person_with_passport(self, data: PersonAddRequest) -> None:
-        person = await self.insert_instance(
-            PersonsOrm(
-                first_name=data.first_name,
-                last_name=data.last_name,
-            )
-        )
-        await self.insert_instance(
-            PassportsOrm(
-                person_id=person.id,
-                number=data.passport.number,
-                registrated_in=data.passport.registrated_in,
-            )
-        )
+    async def get_passport(self, person_id: int) -> PassportsOrm | None:
+        return await self.fetch_active_one(PassportsOrm, person_id=person_id)
 
-    async def get_person_with_passport(self, person_id: int) -> Person | None:
-        person = await self.get_person(person_id)
-        if person is None:
-            return None
-        passport = await self.fetch_active_one(
-            PassportsOrm,
-            person_id=person.id,
-        )
-        return build_person_response(person, passport)
-    
-    async def get_all_persons_with_passports(self, limit: int, offset: int) -> tuple[list[Person], int]:
-        persons, total = await self.fetch_active_page(
+    async def get_persons_page(self, limit: int, offset: int) -> tuple[list[PersonsOrm], int]:
+        return await self.fetch_active_page(
             PersonsOrm,
             limit=limit,
             offset=offset,
-            order_by=PersonsOrm.id
+            order_by=PersonsOrm.id,
         )
-        if not persons:
-            return [], total
-        
-        persons_ids = [person.id for person in persons]
-        passports = await self.fetch_active_in(
+
+    async def get_passports_by_person_ids(self, person_ids: Iterable[int]) -> list[PassportsOrm]:
+        return await self.fetch_active_in(
             PassportsOrm,
             PassportsOrm.person_id,
-            persons_ids,
-            order_by=PassportsOrm.id
+            person_ids,
+            order_by=PassportsOrm.id,
         )
-        passports_by_person_id = {passport.person_id: passport for passport in passports}
-        result = [build_person_response(person, passports_by_person_id[person.id]) for person in persons]
-        return result, total
 
-    async def del_person_with_passport(self, person_id: int) -> bool:
-        person = await self.get_person(person_id)
-        if person is None:
-            return False
+    async def insert_person(self, first_name: str, last_name: str) -> PersonsOrm:
+        return await self.insert_instance(
+            PersonsOrm(
+                first_name=first_name,
+                last_name=last_name,
+            )
+        )
+
+    async def insert_passport(self, person_id: int, number: str, registrated_in: str) -> PassportsOrm:
+        return await self.insert_instance(
+            PassportsOrm(
+                person_id=person_id,
+                number=number,
+                registrated_in=registrated_in,
+            )
+        )
+
+    async def update_person(self, person_id: int, values: dict) -> None:
+        await self.update_where(
+            PersonsOrm,
+            values,
+            id=person_id,
+        )
+
+    async def update_passport(self, person_id: int, values: dict) -> None:
+        await self.update_where(
+            PassportsOrm,
+            values,
+            person_id=person_id,
+        )
+
+    async def soft_delete_person(self, person_id: int) -> None:
         await self.soft_delete_where(
             PersonsOrm,
             id=person_id,
         )
+
+    async def soft_delete_passport(self, person_id: int) -> None:
         await self.soft_delete_where(
             PassportsOrm,
             person_id=person_id,
-        )
-        return True
-
-    async def update_person_with_passport(self, person_id: int, data: PersonPatch) -> None:
-        person = await self.get_person(person_id)
-        if person is None:
-            return UpdatePersonResult(
-                person_found=False,
-                passport_found=False
-            )
-        person_data = data.model_dump(
-            exclude_unset=True,
-            exclude={"passport"},
-        )
-        if person_data:
-            await self.update_where(
-                PersonsOrm,
-                person_data,
-                id=person_id,
-            )
-        if data.passport is not None:
-            passport = await self.fetch_active_one(
-                PassportsOrm,
-                person_id=person_id,
-            )
-            if passport is None:
-                return UpdatePersonResult(
-                    person_found=True,
-                    passport_found=False
-                )
-            await self.update_where(
-                PassportsOrm,
-                data.passport.model_dump(exclude_unset=True),
-                person_id=person_id,
-            )
-        return UpdatePersonResult(
-            person_found=True,
-            passport_found=True
         )

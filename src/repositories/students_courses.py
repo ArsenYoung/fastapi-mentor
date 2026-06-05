@@ -1,59 +1,104 @@
-from collections import defaultdict
-from dataclasses import dataclass
+from collections.abc import Iterable
+
 from sqlalchemy import select
-from src.mappers.students_courses import build_student_response
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
 from src.models.students_courses import StudentsCoursesOrm
 from src.repositories.base import BaseRepository
-from src.schemas.students import Student, StudentAddRequest, StudentPatch
-
-
-@dataclass(slots=True)
-class UpdateStudentResult:
-    student_found: bool
-    courses_found: bool
 
 
 class StudentsCoursesRepository(BaseRepository):
     def __init__(self, session):
         self.session = session
 
-    async def _get_or_restore_course(self, reestr_number: str, title: str) -> CoursesOrm:
-        result = await self.session.execute(
+    async def get_student(self, student_id: int) -> StudentsOrm | None:
+        return await self.fetch_active_one(
+            StudentsOrm, 
+            id=student_id
+        )
+
+    async def get_student_by_record_book_number(self, record_book_number: str) -> StudentsOrm | None:
+        stmt = (
+            select(StudentsOrm)
+            .filter_by(record_book_number=record_book_number)
+            .order_by(StudentsOrm.id.desc())
+        )
+        return await self.fetch_one(stmt)
+
+    async def get_student_links(self, student_id: int) -> list[StudentsCoursesOrm]:
+        return await self.fetch_active_all(
+            StudentsCoursesOrm, 
+            student_id=student_id
+        )
+
+    async def get_students_links(self, student_ids: Iterable[int]) -> list[StudentsCoursesOrm]:
+        return await self.fetch_active_in(
+            StudentsCoursesOrm,
+            StudentsCoursesOrm.student_id,
+            student_ids,
+        )
+    
+    async def get_students_page(self, limit: int, offset: int) -> tuple[list[StudentsOrm], int]:
+        return await self.fetch_active_page(
+            StudentsOrm,
+            limit=limit,
+            offset=offset,
+            order_by=StudentsOrm.id
+        )
+    
+    async def get_course_by_reestr_number(self, reestr_number: str) -> CoursesOrm | None:
+        stmt = (
             select(CoursesOrm)
             .filter_by(reestr_number=reestr_number)
-            .order_by(
-                CoursesOrm.is_deleted.asc(),
-                CoursesOrm.id.desc(),
+            .order_by(CoursesOrm.id.desc())
+        )
+        return await self.fetch_one(stmt)
+    
+    async def get_courses_by_ids(self, course_ids: list[int]) -> list[CoursesOrm]:
+        return await self.fetch_active_in(
+            CoursesOrm,
+            CoursesOrm.id,
+            course_ids,
+            order_by=CoursesOrm.id
+        )
+    
+    async def insert_course(self, reestr_number: str, title: str) -> CoursesOrm:
+        return await self.insert_instance(
+            CoursesOrm(
+                reestr_number=reestr_number,
+                title=title,
             )
         )
-        course = result.scalars().first()
-
-        if course is None:
-            course = await self.insert_instance(
-                CoursesOrm(
-                    reestr_number=reestr_number,
-                    title=title,
-                )
+    
+    async def insert_student(
+        self,
+        first_name: str,
+        last_name: str,
+        record_book_number: str,
+    ) -> StudentsOrm:
+        return await self.insert_instance(
+            StudentsOrm(
+                first_name=first_name,
+                last_name=last_name,
+                record_book_number=record_book_number,
             )
-            return course
-
-        if course.is_deleted:
-            course.is_deleted = False
-            await self.session.flush()
-
-        return course
-
-    async def _attach_course_to_student(self, student_id: int, course_id: int) -> None:
-        active_link = await self.fetch_active_one(
-            StudentsCoursesOrm,
-            student_id=student_id,
-            course_id=course_id,
         )
-        if active_link is not None:
-            return
 
+    async def restore_student(self, student_id: int) -> None:
+        await self.update_where(
+            StudentsOrm,
+            {"is_deleted": False},
+            id=student_id
+        )
+    
+    async def restore_course(self, course_id: int) -> None:
+        await self.update_where(
+            CoursesOrm,
+            {"is_deleted": False},
+            id=course_id
+        )
+
+    async def attach_course_to_student(self, student_id: int, course_id: int) -> None:
         existing_link = await self.fetch_one(
             select(StudentsCoursesOrm).filter_by(
                 student_id=student_id,
@@ -62,195 +107,61 @@ class StudentsCoursesRepository(BaseRepository):
         )
 
         if existing_link is None:
-            self.session.add(
+            await self.insert_instance(
                 StudentsCoursesOrm(
                     student_id=student_id,
                     course_id=course_id,
                 )
             )
             return
+        
+        if existing_link.is_deleted:
+            await self.update_where(
+                StudentsCoursesOrm,
+                {"is_deleted": False},
+                student_id=student_id,
+                course_id=course_id,
+            )
 
-        await self.update_where(
+    async def detach_course_from_student(self, student_id: int, course_id: int) -> None:
+        await self.soft_delete_where(
             StudentsCoursesOrm,
-            {"is_deleted": False},
             student_id=student_id,
             course_id=course_id,
         )
 
-    async def _soft_delete_orphan_courses(self, course_ids: set[int]) -> None:
-        for course_id in course_ids:
-            active_link = await self.fetch_active_one(
-                StudentsCoursesOrm,
-                course_id=course_id,
-            )
-            if active_link is None:
-                await self.soft_delete_where(
-                    CoursesOrm,
-                    id=course_id,
-                )
-
-    async def get_student(self, student_id: int) -> Student | None:
-        return await self.fetch_active_one(StudentsOrm, id=student_id)
-
-    async def create_student_with_courses(self, data: StudentAddRequest) -> None:
-        student = await self.insert_instance(
-            StudentsOrm(
-                first_name=data.first_name,
-                last_name=data.last_name,
-                record_book_number=data.record_book_number
-            )
-        )
-
-        seen_reestr_numbers: set[str] = set()
-        for item in data.courses:
-            if item.reestr_number in seen_reestr_numbers:
-                continue
-            seen_reestr_numbers.add(item.reestr_number)
-
-            course = await self._get_or_restore_course(item.reestr_number, item.title)
-            await self._attach_course_to_student(student.id, course.id)
-
-    async def get_student_with_courses(self, student_id: int) -> Student | None:
-        student = await self.get_student(student_id)
-        if student is None:
-            return None
-
-        m2m = await self.fetch_active_all(
+    async def soft_delete_course_if_orphan(self, course_id: int) -> None:
+        active_link = await self.fetch_active_one(
             StudentsCoursesOrm,
-            student_id=student.id,
+            course_id=course_id,
         )
-
-        courses = []
-        for link in m2m:
-            course = await self.fetch_active_one(
+        if active_link is None:
+            await self.soft_delete_where(
                 CoursesOrm,
-                id=link.course_id,
+                id=course_id,
             )
-            if course is not None:
-                courses.append(course)
 
-        return build_student_response(student, courses)
-    
-    async def get_all_students_with_courses(self, limit: int, offset: int) -> tuple[list[Student], int]:
-        students, total = await self.fetch_active_page(
-            StudentsOrm,
-            limit=limit,
-            offset=offset,
-            order_by=StudentsOrm.id
-        )
-        if not students:
-            return [], total
-        
-        students_ids = [student.id for student in students]
-        links = await self.fetch_active_in(
-            StudentsCoursesOrm,
-            StudentsCoursesOrm.student_id,
-            students_ids,
-        )
-
-        links_by_student_id: dict[int, list[StudentsCoursesOrm]] = defaultdict(list)
-        for link in links:
-            links_by_student_id[link.student_id].append(link)
-
-        course_ids = {link.course_id for link in links}
-        courses = await self.fetch_active_in(
-            CoursesOrm,
-            CoursesOrm.id,
-            course_ids,
-            order_by=CoursesOrm.id,
-        )
-
-        courses_by_id = {course.id: course for course in courses}
-
-        result: list[Student] = []
-
-        for student in students:
-            student_links = links_by_student_id.get(student.id, [])
-            student_courses = []
-
-            for link in student_links:
-                course = courses_by_id.get(link.course_id)
-                if course:
-                    student_courses.append(course)
-            result.append(build_student_response(student, student_courses))
-        
-        return result, total
-
-    async def del_student_with_courses(self, student_id: int) -> bool:
-        student = await self.get_student(student_id)
-        if student is None:
-            return False
-
-        linked_courses = await self.fetch_active_all(
-            StudentsCoursesOrm,
-            student_id=student_id,
-        )
-        course_ids = {link.course_id for link in linked_courses}
-
-        await self.soft_delete_where(
+    async def soft_delete_student(self, student_id: int) -> None:
+        student = await self.fetch_active_one(
             StudentsOrm,
             id=student_id,
         )
-        await self.soft_delete_where(
-            StudentsCoursesOrm,
-            student_id=student_id,
-        )
-        await self._soft_delete_orphan_courses(course_ids)
-        return True
-
-    async def update_student_with_courses(self, student_id: int, data: StudentPatch) -> UpdateStudentResult:
-        student = await self.get_student(student_id)
-        if student is None:
-            return UpdateStudentResult(
-                student_found=False,
-                courses_found=False
-            )
-
-        student_data = data.model_dump(
-            exclude_unset=True,
-            exclude={"courses"},
-        )
-        if student_data:
-            await self.update_where(
+        if student is not None:
+            await self.soft_delete_where(
                 StudentsOrm,
-                student_data,
                 id=student_id,
             )
 
-        if data.courses is not None:
-            requested_course_ids: set[int] = set()
-            seen_reestr_numbers: set[str] = set()
-            current_links = await self.fetch_active_all(
-                StudentsCoursesOrm,
-                student_id=student_id,
-            )
-            current_course_ids = {link.course_id for link in current_links}
+    async def update_course(self, course_id: int, values: dict) -> None:
+        await self.update_where(
+            CoursesOrm,
+            values,
+            id=course_id
+        )
 
-            for item in data.courses:
-                if item.reestr_number in seen_reestr_numbers:
-                    continue
-                seen_reestr_numbers.add(item.reestr_number)
-
-                course = await self._get_or_restore_course(
-                    item.reestr_number,
-                    item.title,
-                )
-                requested_course_ids.add(course.id)
-                await self._attach_course_to_student(student_id, course.id)
-
-            removed_course_ids = current_course_ids - requested_course_ids
-
-            for link in current_links:
-                if link.course_id in removed_course_ids:
-                    await self.soft_delete_where(
-                        StudentsCoursesOrm,
-                        student_id=student_id,
-                        course_id=link.course_id,
-                    )
-
-            await self._soft_delete_orphan_courses(removed_course_ids)
-
-        return UpdateStudentResult(
-            student_found=True,
-            courses_found=True
+    async def update_student(self, student_id: int, values: dict) -> None:
+        await self.update_where(
+            StudentsOrm,
+            values,
+            id=student_id
         )
