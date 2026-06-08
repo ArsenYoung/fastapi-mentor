@@ -1,5 +1,4 @@
 from sqlalchemy.exc import IntegrityError
-import structlog
 
 from src.exceptions.already_exists_exception import AlreadyExistsException
 from src.exceptions.object_not_found_exception import ObjectNotFoundException
@@ -9,8 +8,6 @@ from src.services.base import BaseService
 
 
 class PersonsPassportsService(BaseService):
-    logger = structlog.get_logger()
-    
     def __init__(self, repo: PersonsPassportsRepository):
         self.repo = repo
 
@@ -59,9 +56,15 @@ class PersonsPassportsService(BaseService):
 
     async def get_all_persons_with_passports(self, limit: int, offset: int) -> PersonPage:
         persons, total = await self.repo.get_persons_page(limit, offset)
-        items=[]
-        if persons:
-            person_ids = [person.id for person in persons]
+        if not persons:
+            return PersonPage(
+                items=[],
+                total=total,
+                limit=limit,
+                offset=offset,
+            )
+
+        person_ids = [person.id for person in persons]
         passports = await self.repo.get_passports_by_person_ids(person_ids)
         passports_by_person_id = {passport.person_id: passport for passport in passports}
 

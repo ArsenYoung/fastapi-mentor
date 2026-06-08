@@ -1,7 +1,6 @@
 from collections import defaultdict
 
 from sqlalchemy.exc import IntegrityError
-import structlog
 
 from src.exceptions.already_exists_exception import AlreadyExistsException
 from src.exceptions.object_not_found_exception import ObjectNotFoundException
@@ -12,8 +11,6 @@ from src.services.base import BaseService
 
 
 class StudentsCoursesService(BaseService):
-    logger = structlog.get_logger()
-    
     def __init__(self, repo: StudentsCoursesRepository):
         self.repo = repo
 
