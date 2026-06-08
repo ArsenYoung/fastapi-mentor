@@ -1,0 +1,6 @@
+plan.md
+docs
+.venv
+.env
+.idea
+__pycache__/
