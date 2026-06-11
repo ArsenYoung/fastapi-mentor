@@ -39,10 +39,11 @@ class CourseRead(BaseModel):
     id: int
     reestr_number: str
     title: str
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Course(CourseRead):
-    model_config = ConfigDict(from_attributes=True)
+    pass
 
 
 class CoursePatch(BaseModel):
