@@ -1,83 +1,87 @@
 from collections import defaultdict
 
-from sqlalchemy.exc import IntegrityError
-
-from src.exceptions.already_exists_exception import AlreadyExistsException
-from src.exceptions.object_not_found_exception import ObjectNotFoundException
-from src.repositories.authors_books import AuthorsBooksRepository
-from src.schemas.authors import Author, AuthorAddRequest, AuthorPatch, AuthorsPage
+from src.schemas.authors import (
+    Author,
+    AuthorAddRequest,
+    AuthorPatch,
+    AuthorsPage,
+)
+from src.schemas.books import BookCreateRequest, BookPatch
+from src.services.author import AuthorService
 from src.services.base import BaseService
+from src.services.book import BookService
 
 
 class AuthorsBooksService(BaseService):
-    def __init__(self, repo: AuthorsBooksRepository):
-        self.repo = repo
+    def __init__(
+        self,
+        author_service: AuthorService,
+        book_service: BookService,
+    ):
+        self.author_service = author_service
+        self.book_service = book_service
+
+    async def _sync_books(self, author_id: int, books_data: list) -> None:
+        existing_books = await self.book_service.get_orm_by_author_id(author_id)
+        existing_books_by_code = {book.book_code: book for book in existing_books}
+
+        target_codes: set[str] = set()
+        for item in books_data:
+            target_codes.add(item.book_code)
+            existing_book = existing_books_by_code.get(item.book_code)
+            if existing_book is not None:
+                if existing_book.title != item.title:
+                    await self.book_service.update(
+                        existing_book.id,
+                        BookPatch(book_code=item.book_code, title=item.title),
+                    )
+                continue
+
+            book_with_same_code = await self.book_service.get_any_by_code(item.book_code)
+            if book_with_same_code is not None and book_with_same_code.author_id != author_id:
+                self._raise_already_exists(
+                    message=self.book_service.book_already_exists_msg,
+                    author_id=author_id,
+                    book_code=item.book_code,
+                    existing_author_id=book_with_same_code.author_id,
+                )
+
+            await self.book_service.create_or_restore(
+                author_id,
+                BookCreateRequest(
+                    book_code=item.book_code,
+                    title=item.title,
+                ),
+            )
+
+        for book in existing_books:
+            if book.book_code not in target_codes:
+                await self.book_service.soft_delete(book.id)
 
     async def create_author_with_books(self, data: AuthorAddRequest) -> None:
-        author = await self.repo.get_author_by_code(data.author_code)
-
-        if author is None:
-            try:
-                author = await self.repo.insert_author(
-                    author_code=data.author_code,
-                    first_name=data.first_name,
-                    last_name=data.last_name,
-                )
-            except IntegrityError as exc:
-                self.logger.warning(
-                    "author_already_exists",
-                    author_code=data.author_code,
-                )
-                raise AlreadyExistsException("An author with this code already exists") from exc
-        elif author.is_deleted:
-            await self.repo.restore_author(author.id)
-            await self.repo.update_author(
+        author = await self.author_service.create_or_restore(data)
+        for item in data.books:
+            await self.book_service.create_or_restore(
                 author.id,
-                {
-                    "author_code": data.author_code,
-                    "first_name": data.first_name,
-                    "last_name": data.last_name,
-                },
+                BookCreateRequest(
+                    book_code=item.book_code,
+                    title=item.title,
+                ),
             )
-        else:
-            self.logger.info(
-                "author_already_exists",
-                author_id=author.id,
-            )
-            raise AlreadyExistsException("An author with this code already exists")
-
-        for book in data.books:
-            try:
-                await self.repo.insert_book(
-                    author.id,
-                    book.book_code,
-                    book.title,
-                )
-            except IntegrityError as exc:
-                self.logger.warning(
-                    "book_already_exists",
-                    author_id=author.id,
-                    book_code=book.book_code,
-                )
-                raise AlreadyExistsException(
-                    "A book with this code already exists"
-                ) from exc
-        self.logger.info(
-            "author_created",
-            author_id=author.id,
-        )
 
     async def get_author_with_books(self, author_id: int) -> Author:
-        author = await self.repo.get_author(author_id)
-        if author is None:
-            raise ObjectNotFoundException("Author not found")
-
-        books = await self.repo.get_books_by_author(author_id)
-        author.books = books
-        return Author.model_validate(author)
+        author = await self.author_service.get_active_by_id_or_raise(author_id)
+        books = await self.book_service.get_by_author_id(author_id)
+        return Author(
+            id=author.id,
+            author_code=author.author_code,
+            first_name=author.first_name,
+            last_name=author.last_name,
+            books=books,
+        )
 
     async def get_all_authors_with_books(self, limit: int, offset: int) -> AuthorsPage:
-        authors, total = await self.repo.get_authors_page(limit, offset)
+        authors, total = await self.author_service.get_page(limit, offset)
         if not authors:
             return AuthorsPage(
                 items=[],
@@ -87,16 +91,29 @@ class AuthorsBooksService(BaseService):
             )
 
         author_ids = [author.id for author in authors]
-        books = await self.repo.get_books_by_author_ids(author_ids)
+        books = await self.book_service.get_orm_by_author_ids(author_ids)
 
-        books_by_author_id: dict[int, list] = defaultdict(list)
+        books_by_author_id = defaultdict(list)
         for book in books:
-            books_by_author_id[book.author_id].append(book)
+            books_by_author_id[book.author_id].append(
+                {
+                    "id": book.id,
+                    "book_code": book.book_code,
+                    "title": book.title,
+                }
+            )
 
         items: list[Author] = []
         for author in authors:
-            author.books = books_by_author_id.get(author.id, [])
-            items.append(Author.model_validate(author))
+            items.append(
+                Author(
+                    id=author.id,
+                    author_code=author.author_code,
+                    first_name=author.first_name,
+                    last_name=author.last_name,
+                    books=books_by_author_id.get(author.id, []),
+                )
+            )
 
         return AuthorsPage(
             items=items,
@@ -106,57 +123,19 @@ class AuthorsBooksService(BaseService):
         )
 
     async def del_author_with_books(self, author_id: int) -> None:
-        author = await self.repo.get_author(author_id)
-        if author is None:
-            raise ObjectNotFoundException("Author not found")
-
-        await self.repo.soft_delete_author(author_id)
-        await self.repo.soft_delete_books_by_author(author_id)
-        self.logger.info(
-            "author_deleted",
-            author_id=author.id,
-        )
+        author = await self.author_service.get_active_by_id_or_raise(author_id)
+        await self.book_service.soft_delete_by_author(author_id)
+        await self.author_service.soft_delete(author_id)
+        self.logger.info("author_deleted", author_id=author.id)
 
     async def update_author_with_books(self, author_id: int, data: AuthorPatch) -> None:
-        author = await self.repo.get_author(author_id)
-        if author is None:
-            self.logger.warning(
-                "author_not_found",
-                author_id=author_id,
-            )
-            raise ObjectNotFoundException("Author not found")
-
-        author_data = data.model_dump(
-            exclude_unset=True,
-            exclude={"books"},
-        )
+        author = await self.author_service.get_active_by_id_or_raise(author_id)
+        author_data = data.model_dump(exclude_unset=True, exclude_none=True, exclude={"books"})
         if author_data:
-            try:
-                await self.repo.update_author(author_id, author_data)
-            except IntegrityError as exc:
-                self.logger.warning(
-                    "author_already_exists",
-                    author_id=author_id,
-                )
-                raise AlreadyExistsException("An author with this code already exists") from exc
+            await self.author_service.update(author_id, data)
 
         if data.books is None:
             return
 
-        for book_data in data.books:
-            book = await self.repo.get_book(book_data.book_code, author_id)
-            if book is None:
-                self.logger.warning(
-                    "book_not_found",
-                    author_id=author_id,
-                    book_code=book_data.book_code,
-                )
-                raise ObjectNotFoundException("Book not found")
-
-            values = book_data.model_dump(exclude_unset=True, exclude={"book_code"})
-            if values:
-                await self.repo.update_book(book_data.book_code, author_id, values)
-        self.logger.info(
-            "author_updated",
-            author_id=author.id,
-        )
+        await self._sync_books(author_id, data.books)
+        self.logger.info("author_updated", author_id=author.id)

@@ -21,3 +21,7 @@ class Book(BookRead):
 class BookPatch(BaseModel):
     book_code: str
     title: str | None = None
+
+class BookCreateRequest(BaseModel):
+    book_code: str = Field(min_length=1, max_length=6)
+    title: str = Field(min_length=1, max_length=100)
