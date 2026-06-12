@@ -1,33 +1,21 @@
-from sqlalchemy import select
-
 from src.models.passports import PassportsOrm
 from src.repositories.base import BaseRepository
 
 
 class PassportRepository(BaseRepository):
+    model = PassportsOrm
+
     def __init__(self, session):
         self.session = session
 
-    async def get_by_id_active(self, passport_id: int) -> PassportsOrm | None:
-        return await self.fetch_active_one(
-            PassportsOrm,
-            id=passport_id,
-        )
-
-    async def get_by_id_any(self, passport_id: int) -> PassportsOrm | None:
-        return await self.fetch_one(
-            select(PassportsOrm)
-            .filter_by(id=passport_id)
-        )
-
     async def get_by_person_id_active(self, person_id: int) -> PassportsOrm | None:
-        return await self.fetch_active_one(
+        return await self.get_one_active(
             PassportsOrm,
             person_id=person_id,
         )
 
     async def get_by_person_ids(self, person_ids: list[int]) -> list[PassportsOrm]:
-        return await self.fetch_active_in(
+        return await self.get_many_active_in(
             PassportsOrm,
             PassportsOrm.person_id,
             person_ids,
@@ -35,12 +23,10 @@ class PassportRepository(BaseRepository):
         )
 
     async def insert(self, person_id: int, number: str, registrated_in: str) -> PassportsOrm:
-        return await self.insert_instance(
-            PassportsOrm(
-                person_id=person_id,
-                number=number,
-                registrated_in=registrated_in,
-            )
+        return await self.insert_model(
+            person_id=person_id,
+            number=number,
+            registrated_in=registrated_in,
         )
 
     async def update_by_person_id(self, person_id: int, values: dict) -> None:

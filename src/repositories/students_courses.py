@@ -10,20 +10,20 @@ class StudentsCoursesRepository(BaseRepository):
         self.session = session
 
     async def get_links_by_student_id(self, student_id: int) -> list[StudentsCoursesOrm]:
-        return await self.fetch_active_all(
+        return await self.get_many_active(
             StudentsCoursesOrm, 
             student_id=student_id
         )
 
     async def get_links_by_students_ids(self, student_ids: Iterable[int]) -> list[StudentsCoursesOrm]:
-        return await self.fetch_active_in(
+        return await self.get_many_active_in(
             StudentsCoursesOrm,
             StudentsCoursesOrm.student_id,
             student_ids,
         )
 
     async def attach(self, student_id: int, course_id: int) -> None:
-        existing_link = await self.fetch_one(
+        existing_link = await self.get_one(
             select(StudentsCoursesOrm).filter_by(
                 student_id=student_id,
                 course_id=course_id,
@@ -55,7 +55,7 @@ class StudentsCoursesRepository(BaseRepository):
         )
 
     async def has_active_links(self, course_id: int) -> bool:
-        active_link = await self.fetch_active_one(
+        active_link = await self.get_one_active(
             StudentsCoursesOrm,
             course_id=course_id,
         )

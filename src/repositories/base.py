@@ -1,13 +1,18 @@
 from typing import Any, Generic, Iterable, TypeVar
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.base import BaseServiceModel
 
 ModelT = TypeVar("ModelT", bound=BaseServiceModel)
 
 class BaseRepository(Generic[ModelT]):
+    model: type[ModelT]
+
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    def _get_model(self) -> type[ModelT]:
+        return self.model
 
     async def count_active(self, model: type[ModelT], **filters: Any) -> int:
         result = await self.session.execute(
@@ -17,23 +22,23 @@ class BaseRepository(Generic[ModelT]):
         )
         return result.scalar_one()
 
-    async def fetch_one(self, stmt) -> ModelT | None:
+    async def get_one(self, stmt) -> ModelT | None:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
-    async def fetch_active_one(self, model: type[ModelT], **filters: Any) -> ModelT | None:
+    async def get_one_active(self, model: type[ModelT], **filters: Any) -> ModelT | None:
         stmt = select(model).filter_by(**filters, is_deleted=False)
-        return await self.fetch_one(stmt)
+        return await self.get_one(stmt)
     
-    async def fetch_all(self, stmt) -> list[ModelT]:
+    async def get_many(self, stmt) -> list[ModelT]:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
     
-    async def fetch_active_all(self, model: type[ModelT], **filters: Any) -> list[ModelT]:
+    async def get_many_active(self, model: type[ModelT], **filters: Any) -> list[ModelT]:
         stmt = select(model).filter_by(**filters, is_deleted=False)
-        return await self.fetch_all(stmt)
+        return await self.get_many(stmt)
 
-    async def fetch_active_page(
+    async def get_page_active(
         self, 
         model: type[ModelT], 
         limit:int, 
@@ -49,7 +54,7 @@ class BaseRepository(Generic[ModelT]):
         total = await self.count_active(model, **filters)
         return items, total
     
-    async def fetch_active_in(
+    async def get_many_active_in(
         self,
         model: type[ModelT],
         column: Any,
@@ -65,20 +70,23 @@ class BaseRepository(Generic[ModelT]):
         )
         if order_by:
             stmt = stmt.order_by(order_by)
-        return await self.fetch_all(stmt)
+        return await self.get_many(stmt)
+
+    async def get_latest_one(self, model: type[ModelT], order_by: Any, **filters: Any) -> ModelT | None:
+        stmt = (
+            select(model)
+            .filter_by(**filters)
+            .order_by(order_by.desc())
+        )
+        return await self.get_one(stmt)
     
     async def insert_instance(self, instance: ModelT) -> ModelT:
         self.session.add(instance)
         await self.session.flush()
         return instance
-    
-    async def insert_returning(self, model: type[ModelT], values: dict[str, Any]) -> ModelT:
-        result = await self.session.execute(
-            insert(model)
-            .values(**values)
-            .returning(model)
-        )
-        return result.scalar_one()
+
+    async def insert_model(self, **values: Any) -> ModelT:
+        return await self.insert_instance(self._get_model()(**values))
     
     async def update_where(self, model: type[ModelT], values: dict[str, Any], **filters: Any) -> int:
         result = await self.session.execute(
@@ -93,6 +101,48 @@ class BaseRepository(Generic[ModelT]):
             model, 
             {"is_deleted": True},
             **filters
+        )
+
+    async def get_by_id_active(self, entity_id: int) -> ModelT | None:
+        return await self.get_one_active(
+            self._get_model(),
+            id=entity_id,
+        )
+
+    async def get_by_id_any(self, entity_id: int) -> ModelT | None:
+        return await self.get_one(
+            select(self._get_model())
+            .filter_by(id=entity_id)
+        )
+
+    async def get_page(self, limit: int, offset: int, **filters: Any) -> tuple[list[ModelT], int]:
+        model = self._get_model()
+        return await self.get_page_active(
+            model,
+            limit=limit,
+            offset=offset,
+            order_by=model.id,
+            **filters,
+        )
+
+    async def update(self, entity_id: int, values: dict[str, Any]) -> None:
+        await self.update_where(
+            self._get_model(),
+            values,
+            id=entity_id,
+        )
+
+    async def soft_delete(self, entity_id: int) -> None:
+        await self.soft_delete_where(
+            self._get_model(),
+            id=entity_id,
+        )
+
+    async def restore(self, entity_id: int) -> None:
+        await self.update_where(
+            self._get_model(),
+            {"is_deleted": False},
+            id=entity_id,
         )
         
 

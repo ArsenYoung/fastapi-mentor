@@ -18,7 +18,7 @@ class CourseService(BaseService):
         return self.course_unique_constraint in str(exc)
 
     async def get_active_by_id_or_raise(self, course_id: int) -> CoursesOrm:
-        course = await self.repo.fetch_active_one(CoursesOrm, id=course_id)
+        course = await self.repo.get_by_id_active(course_id)
         if course is None:
             self._raise_not_found(
                 self.course_not_found_msg,

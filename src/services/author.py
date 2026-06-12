@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.authors import AuthorsOrm
 from src.repositories.author import AuthorRepository
-from src.schemas.authors import AuthorCreateRequest, AuthorPatch
+from src.schemas.authors import AuthorAdd, AuthorPatch
 from src.services.base import BaseService
 
 
@@ -32,7 +32,7 @@ class AuthorService(BaseService):
     async def get_page(self, limit: int, offset: int) -> tuple[list[AuthorsOrm], int]:
         return await self.repo.get_page(limit, offset)
 
-    async def create(self, data: AuthorCreateRequest) -> AuthorsOrm:
+    async def create(self, data: AuthorAdd) -> AuthorsOrm:
         try:
             return await self.repo.insert(
                 author_code=data.author_code,
@@ -48,7 +48,7 @@ class AuthorService(BaseService):
                 )
             raise
 
-    async def create_or_restore(self, data: AuthorCreateRequest) -> AuthorsOrm:
+    async def create_or_restore(self, data: AuthorAdd) -> AuthorsOrm:
         author = await self.get_any_by_code(data.author_code)
         if author is None:
             return await self.create(data)

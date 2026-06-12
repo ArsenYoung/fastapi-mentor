@@ -73,8 +73,3 @@ class AuthorsPage(BaseModel):
     total: int
     limit: int
     offset: int
-
-class AuthorCreateRequest(BaseModel):
-    author_code: str = Field(min_length=1, max_length=6)
-    first_name: str = Field(min_length=1, max_length=50)
-    last_name: str = Field(min_length=1, max_length=50)

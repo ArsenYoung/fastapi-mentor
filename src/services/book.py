@@ -2,7 +2,8 @@ from sqlalchemy.exc import IntegrityError
 
 from src.models.books import BooksOrm
 from src.repositories.book import BookRepository
-from src.schemas.books import Book, BookCreateRequest, BookPatch
+from src.schemas.authors import AuthorBookUpsertRequest
+from src.schemas.books import Book, BookAddRequest, BookPatch
 from src.services.base import BaseService
 
 
@@ -39,7 +40,7 @@ class BookService(BaseService):
     async def get_orm_by_author_ids(self, author_ids: list[int]) -> list[BooksOrm]:
         return await self.repo.get_by_author_ids(author_ids)
     
-    async def create(self, author_id: int, data: BookCreateRequest) -> BooksOrm:
+    async def create(self, author_id: int, data: BookAddRequest | AuthorBookUpsertRequest) -> BooksOrm:
         try:
             return await self.repo.insert(
                 author_id=author_id,
@@ -55,7 +56,11 @@ class BookService(BaseService):
                 )
             raise
 
-    async def create_or_restore(self, author_id: int, data: BookCreateRequest) -> BooksOrm:
+    async def create_or_restore(
+        self,
+        author_id: int,
+        data: BookAddRequest | AuthorBookUpsertRequest,
+    ) -> BooksOrm:
         book = await self.get_any_by_code(data.book_code)
         if book is None:
             return await self.create(author_id, data)

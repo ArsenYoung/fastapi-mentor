@@ -3,10 +3,11 @@ from collections import defaultdict
 from src.schemas.authors import (
     Author,
     AuthorAddRequest,
+    AuthorBookUpsertRequest,
     AuthorPatch,
     AuthorsPage,
 )
-from src.schemas.books import BookCreateRequest, BookPatch
+from src.schemas.books import BookAddRequest, BookPatch
 from src.services.author import AuthorService
 from src.services.base import BaseService
 from src.services.book import BookService
@@ -21,7 +22,7 @@ class AuthorsBooksService(BaseService):
         self.author_service = author_service
         self.book_service = book_service
 
-    async def _sync_books(self, author_id: int, books_data: list) -> None:
+    async def _sync_books(self, author_id: int, books_data: list[AuthorBookUpsertRequest]) -> None:
         existing_books = await self.book_service.get_orm_by_author_id(author_id)
         existing_books_by_code = {book.book_code: book for book in existing_books}
 
@@ -48,7 +49,7 @@ class AuthorsBooksService(BaseService):
 
             await self.book_service.create_or_restore(
                 author_id,
-                BookCreateRequest(
+                BookAddRequest(
                     book_code=item.book_code,
                     title=item.title,
                 ),
@@ -63,7 +64,7 @@ class AuthorsBooksService(BaseService):
         for item in data.books:
             await self.book_service.create_or_restore(
                 author.id,
-                BookCreateRequest(
+                BookAddRequest(
                     book_code=item.book_code,
                     title=item.title,
                 ),
