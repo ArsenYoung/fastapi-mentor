@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.schemas.courses import CourseAddRequest, CourseRead
+from src.schemas.courses import Course, CourseCreate
 
 JSON_EXAMPLE_ADD_REQUEST = {
     "examples": [
@@ -43,49 +43,41 @@ JSON_EXAMPLE_PATCH_REQUEST = {
 }
 
 
-class StudentAddRequest(BaseModel):
+class StudentCreate(BaseModel):
     first_name: str = Field(min_length=1, max_length=50)
     last_name: str = Field(min_length=1, max_length=50)
     record_book_number: str = Field(min_length=1, max_length=8)
-    courses: list[CourseAddRequest]
+    courses: list[CourseCreate]
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
     )
 
 
-class StudentRead(BaseModel):
+class Student(BaseModel):
     id: int
     first_name: str
     last_name: str
     record_book_number: str
-    courses: list[CourseRead]
-
-
-class Student(StudentRead):
+    courses: list[Course]
     model_config = ConfigDict(from_attributes=True)
 
 
-class StudentCourseUpsertRequest(BaseModel):
+class StudentCourseUpdateRequest(BaseModel):
     reestr_number: str = Field(min_length=1, max_length=4)
     title: str = Field(min_length=1, max_length=150)
 
 
-class StudentPatch(BaseModel):
+class StudentUpdate(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     record_book_number: str | None = None
-    courses: list[StudentCourseUpsertRequest] | None = None
+    courses: list[StudentCourseUpdateRequest] | None = None
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )
 
-class StudentsPage(BaseModel):
-    items: list[StudentRead]
-    total: int
+class StudentsPaginatedList(BaseModel):
+    items: list[Student]
+    has_next: bool
     limit: int
     offset: int
-
-class StudentCreateRequest(BaseModel):
-    first_name: str = Field(min_length=1, max_length=50)
-    last_name: str = Field(min_length=1, max_length=50)
-    record_book_number: str = Field(min_length=1, max_length=8)

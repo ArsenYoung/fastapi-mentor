@@ -27,7 +27,7 @@ JSON_EXAMPLE_PATCH_REQUEST = {
 }
 
 
-class CourseAddRequest(BaseModel):
+class CourseCreate(BaseModel):
     reestr_number: str = Field(min_length=1, max_length=4)
     title: str = Field(min_length=1, max_length=150)
     model_config = ConfigDict(
@@ -35,18 +35,14 @@ class CourseAddRequest(BaseModel):
     )
 
 
-class CourseRead(BaseModel):
+class Course(BaseModel):
     id: int
     reestr_number: str
     title: str
     model_config = ConfigDict(from_attributes=True)
 
 
-class Course(CourseRead):
-    pass
-
-
-class CoursePatch(BaseModel):
+class CourseUpdate(BaseModel):
     reestr_number: str | None = None
     title: str | None = None
     model_config = ConfigDict(

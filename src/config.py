@@ -13,6 +13,6 @@ class Settings(BaseSettings):
         env_file_encoding='utf-8',
     )
 
-    postgres_url: PostgresDsn = 'postgresql+asyncpg://mentor:123456@localhost:5532/mentor'
+    postgres_url: PostgresDsn
     log_level: str = "INFO"
     log_json: bool = True

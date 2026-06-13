@@ -1,8 +1,8 @@
-"""version 1
+"""ver 1
 
-Revision ID: 9247984da3fd
-Revises:
-Create Date: 2026-06-05 15:35:27.074828
+Revision ID: f97379887d69
+Revises: 621f2c8dda8f
+Create Date: 2026-06-12 14:50:20.715477
 
 """
 
@@ -12,8 +12,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "9247984da3fd"
-down_revision: Union[str, Sequence[str], None] = None
+revision: str = "f97379887d69"
+down_revision: Union[str, Sequence[str], None] = "621f2c8dda8f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -33,12 +33,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -47,7 +42,6 @@ def upgrade() -> None:
         "authors",
         ["author_code"],
         unique=True,
-        postgresql_where=sa.text("is_deleted = false"),
     )
     op.create_table(
         "courses",
@@ -60,12 +54,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -87,12 +76,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -108,12 +92,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -136,12 +115,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["author_id"], ["authors.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -151,7 +125,6 @@ def upgrade() -> None:
         "books",
         ["book_code"],
         unique=True,
-        postgresql_where=sa.text("is_deleted = false"),
     )
     op.create_table(
         "passports",
@@ -165,12 +138,7 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column(
-            "updated_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["person_id"], ["persons.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -197,7 +165,6 @@ def downgrade() -> None:
     op.drop_index(
         "uq_books_book_code_active",
         table_name="books",
-        postgresql_where=sa.text("is_deleted = false"),
     )
     op.drop_table("books")
     op.drop_index(
@@ -216,7 +183,6 @@ def downgrade() -> None:
     op.drop_index(
         "uq_authors_author_code_active",
         table_name="authors",
-        postgresql_where=sa.text("is_deleted = false"),
     )
     op.drop_table("authors")
     # ### end Alembic commands ###

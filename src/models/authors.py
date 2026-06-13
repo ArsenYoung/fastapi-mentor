@@ -1,4 +1,4 @@
-from sqlalchemy import Index, String, text
+from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base
 
@@ -10,7 +10,6 @@ class AuthorsOrm(Base):
             "uq_authors_author_code_active",
             "author_code",
             unique=True,
-            postgresql_where=text("is_deleted = false"),
         ),
     )
 

@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Index, String, text
+from sqlalchemy import ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
@@ -11,7 +11,6 @@ class BooksOrm(Base):
             "uq_books_book_code_active",
             "book_code",
             unique=True,
-            postgresql_where=text("is_deleted = false"),
         ),
     )
 

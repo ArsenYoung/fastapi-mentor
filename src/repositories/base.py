@@ -14,47 +14,72 @@ class BaseRepository(Generic[ModelT]):
     def _get_model(self) -> type[ModelT]:
         return self.model
 
-    async def count_active(self, model: type[ModelT], **filters: Any) -> int:
-        result = await self.session.execute(
-            select(func.count())
-            .select_from(model)
-            .filter_by(**filters, is_deleted=False)
-        )
-        return result.scalar_one()
+    def _build_select(
+        self,
+        model: type[ModelT],
+        *,
+        active_only: bool,
+        order_by: Any | None = None,
+        descending: bool = False,
+        in_filter: tuple[Any, Iterable[Any]] | None = None,
+        **filters: Any,
+    ):
+        stmt = select(model)
+        if in_filter is not None:
+            column, values = in_filter
+            stmt = stmt.where(column.in_(values))
+        if active_only:
+            stmt = stmt.where(model.is_deleted.is_(False))
+        if filters:
+            stmt = stmt.filter_by(**filters)
+        if order_by is not None:
+            stmt = stmt.order_by(order_by.desc() if descending else order_by)
+        return stmt
 
-    async def get_one(self, stmt) -> ModelT | None:
+    async def _get_one_by_stmt(self, stmt) -> ModelT | None:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
     
-    async def get_one_active(self, model: type[ModelT], **filters: Any) -> ModelT | None:
-        stmt = select(model).filter_by(**filters, is_deleted=False)
-        return await self.get_one(stmt)
-    
-    async def get_many(self, stmt) -> list[ModelT]:
+    async def _get_many_by_stmt(self, stmt) -> list[ModelT]:
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
-    
-    async def get_many_active(self, model: type[ModelT], **filters: Any) -> list[ModelT]:
-        stmt = select(model).filter_by(**filters, is_deleted=False)
-        return await self.get_many(stmt)
 
-    async def get_page_active(
+    async def get_one(self, model: type[ModelT], **filters: Any) -> ModelT | None:
+        stmt = self._build_select(
+            model,
+            active_only=True,
+            **filters,
+        )
+        return await self._get_one_by_stmt(stmt)
+
+    async def get_many(self, model: type[ModelT], **filters: Any) -> list[ModelT]:
+        stmt = self._build_select(
+            model,
+            active_only=True,
+            **filters,
+        )
+        return await self._get_many_by_stmt(stmt)
+
+    async def get_paginated_list_by_model(
         self, 
         model: type[ModelT], 
         limit:int, 
         offset: int, 
         order_by: Any | None = None,
         **filters: Any,
-    ) -> tuple[list[ModelT], int]:
-        stmt = select(model).filter_by(**filters, is_deleted=False)
-        if order_by:
-            stmt = stmt.order_by(order_by)
-        items_result = await self.session.execute(stmt.offset(offset).limit(limit))
+    ) -> tuple[list[ModelT], bool]:
+        stmt = self._build_select(
+            model,
+            active_only=True,
+            order_by=order_by,
+            **filters,
+        )
+        items_result = await self.session.execute(stmt.offset(offset).limit(limit + 1))
         items = list(items_result.scalars().all())
-        total = await self.count_active(model, **filters)
-        return items, total
-    
-    async def get_many_active_in(
+        has_next = len(items) > limit
+        return items[:limit], has_next
+
+    async def get_many_in(
         self,
         model: type[ModelT],
         column: Any,
@@ -64,60 +89,29 @@ class BaseRepository(Generic[ModelT]):
         values = list(values)
         if not values:
             return []
-        stmt = select(model).where(
-            column.in_(values),
-            model.is_deleted.is_(False)
+        stmt = self._build_select(
+            model,
+            active_only=True,
+            order_by=order_by,
+            in_filter=(column, values),
         )
-        if order_by:
-            stmt = stmt.order_by(order_by)
-        return await self.get_many(stmt)
-
-    async def get_latest_one(self, model: type[ModelT], order_by: Any, **filters: Any) -> ModelT | None:
-        stmt = (
-            select(model)
-            .filter_by(**filters)
-            .order_by(order_by.desc())
-        )
-        return await self.get_one(stmt)
+        return await self._get_many_by_stmt(stmt)
     
-    async def insert_instance(self, instance: ModelT) -> ModelT:
+    async def insert(self, **values: Any) -> ModelT:
+        instance = self._get_model()(**values)
         self.session.add(instance)
         await self.session.flush()
         return instance
 
-    async def insert_model(self, **values: Any) -> ModelT:
-        return await self.insert_instance(self._get_model()(**values))
-    
-    async def update_where(self, model: type[ModelT], values: dict[str, Any], **filters: Any) -> int:
-        result = await self.session.execute(
-            update(model)
-            .filter_by(**filters)
-            .values(values)
-        )
-        return result.rowcount or 0
-    
-    async def soft_delete_where(self, model: type[ModelT], **filters: Any) -> int:
-        return await self.update_where(
-            model, 
-            {"is_deleted": True},
-            **filters
-        )
-
-    async def get_by_id_active(self, entity_id: int) -> ModelT | None:
-        return await self.get_one_active(
+    async def get_by_id(self, entity_id: int) -> ModelT | None:
+        return await self.get_one(
             self._get_model(),
             id=entity_id,
         )
 
-    async def get_by_id_any(self, entity_id: int) -> ModelT | None:
-        return await self.get_one(
-            select(self._get_model())
-            .filter_by(id=entity_id)
-        )
-
-    async def get_page(self, limit: int, offset: int, **filters: Any) -> tuple[list[ModelT], int]:
+    async def get_paginated_list(self, limit: int, offset: int, **filters: Any) -> tuple[list[ModelT], bool]:
         model = self._get_model()
-        return await self.get_page_active(
+        return await self.get_paginated_list_by_model(
             model,
             limit=limit,
             offset=offset,
@@ -126,24 +120,26 @@ class BaseRepository(Generic[ModelT]):
         )
 
     async def update(self, entity_id: int, values: dict[str, Any]) -> None:
-        await self.update_where(
-            self._get_model(),
-            values,
-            id=entity_id,
+        await self.session.execute(
+            update(self._get_model())
+            .filter_by(id=entity_id)
+            .values(
+                **values,
+                updated_at=func.now(),
+            )
         )
 
     async def soft_delete(self, entity_id: int) -> None:
-        await self.soft_delete_where(
-            self._get_model(),
-            id=entity_id,
+        await self.session.execute(
+            update(self._get_model())
+            .filter_by(id=entity_id)
+            .values(
+                is_deleted=True,
+                updated_at=func.now(),
+            )
         )
 
-    async def restore(self, entity_id: int) -> None:
-        await self.update_where(
-            self._get_model(),
-            {"is_deleted": False},
-            id=entity_id,
+    async def acquire_advisory_lock(self, lock_key: str) -> None:
+        await self.session.execute(
+            select(func.pg_advisory_xact_lock(func.hashtext(lock_key)))
         )
-        
-
-    

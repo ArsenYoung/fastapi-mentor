@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.schemas.passports import PassportAddRequest, PassportPatch, PassportRead
+from src.schemas.passports import Passport, PassportCreate, PassportUpdate
 
 JSON_EXAMPLE_ADD_REQUEST = {
     "examples": [
@@ -29,39 +29,33 @@ JSON_EXAMPLE_PATCH_REQUEST = {
 }
 
 
-class PersonAdd(BaseModel):
+class PersonCreate(BaseModel):
     first_name: str = Field(min_length=1, max_length=50)
     last_name: str = Field(min_length=1, max_length=50)
-
-
-class PersonAddRequest(PersonAdd):
-    passport: PassportAddRequest
+    passport: PassportCreate
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
     )
 
 
-class PersonRead(BaseModel):
+class Person(BaseModel):
     id: int
     first_name: str
     last_name: str
-    passport: PassportRead
-
-
-class Person(PersonRead):
+    passport: Passport
     model_config = ConfigDict(from_attributes=True)
 
 
-class PersonPatch(BaseModel):
+class PersonUpdate(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
-    passport: PassportPatch | None = None
+    passport: PassportUpdate | None = None
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )
 
-class PersonPage(BaseModel):
-    items: list[PersonRead]
-    total: int
+class PersonsPaginatedList(BaseModel):
+    items: list[Person]
+    has_next: bool
     limit: int
     offset: int

@@ -14,10 +14,9 @@ class BaseServiceModel:
         nullable=False,
         server_default=func.now(),
     )
-    updated_at: Mapped[datetime] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
+        nullable=True,
         onupdate=func.now(),
     )
     is_deleted: Mapped[bool] = mapped_column(
@@ -25,11 +24,6 @@ class BaseServiceModel:
         nullable=False,
         default=False
     )
-
-    @classmethod
-    def on_conflict_constraint(cls) -> tuple | None:
-        return None
-
 
 Base: DeclarativeMeta = mapped_registry.generate_base(cls=BaseServiceModel)
 AssociationBase = mapped_registry.generate_base()
