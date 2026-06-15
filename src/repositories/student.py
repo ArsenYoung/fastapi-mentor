@@ -28,19 +28,19 @@ class StudentRepository(BaseRepository):
             .order_by(StudentsOrm.id)
         )
 
-    async def _get_student_with_courses_or_none(self, student_id: int) -> StudentsOrm | None:
+    async def _get_student_with_courses(self, student_id: int) -> StudentsOrm | None:
         stmt = self._get_with_courses_stmt().where(StudentsOrm.id == student_id)
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
     
-    async def get_by_record_book_number(self, record_book_number: str) -> StudentsOrm | None:
+    async def get_student_by_record_book_number(self, record_book_number: str) -> StudentsOrm | None:
         return await self.get_one(
             StudentsOrm,
             record_book_number=record_book_number,
         )
 
     async def get_student_with_courses(self, student_id: int) -> StudentsOrm | None:
-        return await self._get_student_with_courses_or_none(student_id)
+        return await self._get_student_with_courses(student_id)
 
     async def get_students_with_courses_paginated_list(
         self,
@@ -53,13 +53,13 @@ class StudentRepository(BaseRepository):
         has_next = len(students) > limit
         return students[:limit], has_next
     
-    async def insert(
+    async def create(
         self,
         first_name: str,
         last_name: str,
         record_book_number: str,
     ) -> StudentsOrm:
-        return await super().insert(
+        return await super().create(
             first_name=first_name,
             last_name=last_name,
             record_book_number=record_book_number,
@@ -103,7 +103,7 @@ class StudentRepository(BaseRepository):
             )
         )
 
-    async def soft_delete_course(self, course_id: int) -> None:
+    async def delete_course(self, course_id: int) -> None:
         await self.session.execute(
             update(CoursesOrm)
             .filter_by(id=course_id)
@@ -138,7 +138,7 @@ class StudentRepository(BaseRepository):
             )
         )
 
-    async def soft_delete_course_if_unused(self, course_id: int) -> None:
+    async def delete_course_if_unused(self, course_id: int) -> None:
         await self.acquire_advisory_lock(f"course-links:{course_id}")
         await self.session.execute(
             update(CoursesOrm)

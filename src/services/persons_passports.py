@@ -14,7 +14,12 @@ class PersonsPassportsService(BaseService):
             self._raise_already_exists(
                 message="A person with this passport number already exists",
             )
-        person = await self.repo.create_person_with_passport(data)
+        person = await self.repo.create_person_with_passport(
+            first_name=data.first_name,
+            last_name=data.last_name,
+            passport_number=data.passport.number,
+            registrated_in=data.passport.registrated_in,
+        )
         self.logger.info(
             "person_created",
             person_id=person.id,
@@ -58,13 +63,29 @@ class PersonsPassportsService(BaseService):
                 message="Person not found",
                 person_id=person_id,
             )
+
+        person_data = data.model_dump(
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={"passport"},
+        )
+        passport_data = {}
         if data.passport is not None and data.passport.number is not None:
             passport = await self.repo.get_passport_by_number(data.passport.number)
             if passport is not None and passport.person_id != person_id:
                 self._raise_already_exists(
                     message="A person with this passport number already exists",
                 )
-        person = await self.repo.update_person_with_passport(person_id, data)
+        if data.passport is not None:
+            passport_data = data.passport.model_dump(
+                exclude_unset=True,
+                exclude_none=True,
+            )
+        person = await self.repo.update_person_with_passport(
+            person_id,
+            person_data,
+            passport_data,
+        )
         self.logger.info(
             "person_updated",
             person_id=person.id,

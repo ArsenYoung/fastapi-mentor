@@ -97,7 +97,7 @@ class BaseRepository(Generic[ModelT]):
         )
         return await self._get_many_by_stmt(stmt)
     
-    async def insert(self, **values: Any) -> ModelT:
+    async def create(self, **values: Any) -> ModelT:
         instance = self._get_model()(**values)
         self.session.add(instance)
         await self.session.flush()
@@ -129,7 +129,7 @@ class BaseRepository(Generic[ModelT]):
             )
         )
 
-    async def soft_delete(self, entity_id: int) -> None:
+    async def delete(self, entity_id: int) -> None:
         await self.session.execute(
             update(self._get_model())
             .filter_by(id=entity_id)

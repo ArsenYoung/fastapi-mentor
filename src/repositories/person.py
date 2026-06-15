@@ -4,7 +4,6 @@ from sqlalchemy.orm import joinedload
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
 from src.repositories.base import BaseRepository
-from src.schemas.persons import PersonCreate, PersonUpdate
 
 
 class PersonRepository(BaseRepository):
@@ -25,7 +24,7 @@ class PersonRepository(BaseRepository):
             .order_by(PersonsOrm.id)
         )
 
-    async def _get_person_with_passport_or_none(self, person_id: int) -> PersonsOrm | None:
+    async def _get_person_with_passport(self, person_id: int) -> PersonsOrm | None:
         stmt = self._get_with_passport_stmt().where(PersonsOrm.id == person_id)
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
@@ -36,25 +35,31 @@ class PersonRepository(BaseRepository):
             number=number,
         )
 
-    async def create_person_with_passport(self, data: PersonCreate) -> PersonsOrm:
-        person = await self.insert(
-            first_name=data.first_name,
-            last_name=data.last_name,
+    async def create_person_with_passport(
+        self,
+        first_name: str,
+        last_name: str,
+        passport_number: str,
+        registrated_in: str,
+    ) -> PersonsOrm:
+        person = await self.create(
+            first_name=first_name,
+            last_name=last_name,
         )
         self.session.add(
             PassportsOrm(
                 person_id=person.id,
-                number=data.passport.number,
-                registrated_in=data.passport.registrated_in,
+                number=passport_number,
+                registrated_in=registrated_in,
             )
         )
         await self.session.flush()
-        created_person = await self._get_person_with_passport_or_none(person.id)
+        created_person = await self._get_person_with_passport(person.id)
         assert created_person is not None
         return created_person
 
     async def get_person_with_passport(self, person_id: int) -> PersonsOrm | None:
-        return await self._get_person_with_passport_or_none(person_id)
+        return await self._get_person_with_passport(person_id)
 
     async def get_persons_with_passports_paginated_list(
         self,
@@ -77,7 +82,7 @@ class PersonRepository(BaseRepository):
             )
         )
 
-    async def soft_delete_passport_by_person_id(self, person_id: int) -> None:
+    async def delete_passport_by_person_id(self, person_id: int) -> None:
         await self.session.execute(
             update(PassportsOrm)
             .filter_by(person_id=person_id)
@@ -87,34 +92,28 @@ class PersonRepository(BaseRepository):
             )
         )
 
-    async def update_person_with_passport(self, person_id: int, data: PersonUpdate) -> PersonsOrm | None:
-        person = await self._get_person_with_passport_or_none(person_id)
+    async def update_person_with_passport(
+        self,
+        person_id: int,
+        person_values: dict,
+        passport_values: dict,
+    ) -> PersonsOrm | None:
+        person = await self._get_person_with_passport(person_id)
         if person is None:
             return None
 
-        person_data = data.model_dump(
-            exclude_unset=True,
-            exclude_none=True,
-            exclude={"passport"},
-        )
-        if person_data:
-            await self.update(person_id, person_data)
+        if person_values:
+            await self.update(person_id, person_values)
 
-        if data.passport is not None:
-            await self.update_passport_by_person_id(
-                person_id,
-                data.passport.model_dump(
-                    exclude_unset=True,
-                    exclude_none=True,
-                ),
-            )
+        if passport_values:
+            await self.update_passport_by_person_id(person_id, passport_values)
 
-        return await self._get_person_with_passport_or_none(person_id)
+        return await self._get_person_with_passport(person_id)
 
     async def delete_person_with_passport(self, person_id: int) -> PersonsOrm | None:
-        person = await self._get_person_with_passport_or_none(person_id)
+        person = await self._get_person_with_passport(person_id)
         if person is None:
             return None
-        await self.soft_delete_passport_by_person_id(person_id)
-        await self.soft_delete(person_id)
+        await self.delete_passport_by_person_id(person_id)
+        await self.delete(person_id)
         return person

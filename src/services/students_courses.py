@@ -37,7 +37,7 @@ class StudentsCoursesService(BaseService):
         *,
         exclude_student_id: int | None = None,
     ) -> None:
-        student = await self.repo.get_by_record_book_number(record_book_number)
+        student = await self.repo.get_student_by_record_book_number(record_book_number)
         if student is None or student.id == exclude_student_id:
             return
         self._raise_already_exists(
@@ -59,7 +59,7 @@ class StudentsCoursesService(BaseService):
             [course.reestr_number for course in data.courses],
         )
         await self._raise_if_record_book_number_exists(data.record_book_number)
-        student = await self.repo.insert(
+        student = await self.repo.create(
             first_name=data.first_name,
             last_name=data.last_name,
             record_book_number=data.record_book_number,
@@ -96,8 +96,8 @@ class StudentsCoursesService(BaseService):
             )
         for course in student.courses:
             await self.repo.detach_course(student_id, course.id)
-            await self.repo.soft_delete_course_if_unused(course.id)
-        await self.repo.soft_delete(student_id)
+            await self.repo.delete_course_if_unused(course.id)
+        await self.repo.delete(student_id)
         self.logger.info("student_deleted", student_id=student.id)
 
     async def update_student_with_courses(self, student_id: int, data: StudentUpdate) -> None:
@@ -135,5 +135,5 @@ class StudentsCoursesService(BaseService):
             course_ids_to_detach = existing_course_ids - target_course_ids
             for course_id in course_ids_to_detach:
                 await self.repo.detach_course(student.id, course_id)
-                await self.repo.soft_delete_course_if_unused(course_id)
+                await self.repo.delete_course_if_unused(course_id)
         self.logger.info("student_updated", student_id=student.id)

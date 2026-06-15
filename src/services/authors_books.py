@@ -19,7 +19,7 @@ class AuthorsBooksService(BaseService):
         *,
         exclude_author_id: int | None = None,
     ) -> None:
-        author = await self.repo.get_by_author_code(author_code)
+        author = await self.repo.get_author_by_code(author_code)
         if author is None or author.id == exclude_author_id:
             return
         self._raise_already_exists(
@@ -45,7 +45,7 @@ class AuthorsBooksService(BaseService):
         exclude_author_id: int | None = None,
         author_id: int | None = None,
     ) -> None:
-        existing_books = await self.repo.get_books_by_codes(book_codes)
+        existing_books = await self.repo.get_books_by_book_codes(book_codes)
         for book in existing_books:
             if book.author_id == exclude_author_id:
                 continue
@@ -59,7 +59,18 @@ class AuthorsBooksService(BaseService):
         await self._raise_if_author_code_exists(data.author_code)
         self._raise_if_duplicate_book_codes([book.book_code for book in data.books])
         await self._raise_if_book_codes_exist([book.book_code for book in data.books])
-        author = await self.repo.create_author_with_books(data)
+        author = await self.repo.create_author_with_books(
+            author_code=data.author_code,
+            first_name=data.first_name,
+            last_name=data.last_name,
+            books=[
+                {
+                    "book_code": book.book_code,
+                    "title": book.title,
+                }
+                for book in data.books
+            ],
+        )
         self.logger.info("author_created", author_id=author.id)
 
     async def get_author_with_books(self, author_id: int) -> Author:
@@ -99,6 +110,12 @@ class AuthorsBooksService(BaseService):
                 message="Author not found",
                 author_id=author_id,
             )
+        author_data = data.model_dump(
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={"books"},
+        )
+        books_data = None
         if data.author_code is not None:
             await self._raise_if_author_code_exists(
                 data.author_code,
@@ -114,5 +131,16 @@ class AuthorsBooksService(BaseService):
                 exclude_author_id=author_id,
                 author_id=author_id,
             )
-        author = await self.repo.update_author_with_books(author_id, data)
+            books_data = [
+                {
+                    "book_code": book.book_code,
+                    "title": book.title,
+                }
+                for book in data.books
+            ]
+        author = await self.repo.update_author_with_books(
+            author_id,
+            author_data,
+            books_data,
+        )
         self.logger.info("author_updated", author_id=author.id)
