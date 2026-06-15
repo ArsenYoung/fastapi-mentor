@@ -30,6 +30,20 @@ class AuthorRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
 
+    async def get_by_author_code(self, author_code: str) -> AuthorsOrm | None:
+        return await self.get_one(
+            AuthorsOrm,
+            author_code=author_code,
+        )
+
+    async def get_books_by_codes(self, book_codes: list[str]) -> list[BooksOrm]:
+        return await self.get_many_in(
+            BooksOrm,
+            BooksOrm.book_code,
+            book_codes,
+            order_by=BooksOrm.id,
+        )
+
     async def create_author_with_books(self, data: AuthorCreate) -> AuthorsOrm:
         author = await self.insert(
             author_code=data.author_code,
@@ -46,7 +60,9 @@ class AuthorRepository(BaseRepository):
                 )
             )
         await self.session.flush()
-        return await self._get_author_with_books_or_none(author.id)
+        created_author = await self._get_author_with_books_or_none(author.id)
+        assert created_author is not None
+        return created_author
 
     async def get_author_with_books(self, author_id: int) -> AuthorsOrm | None:
         return await self._get_author_with_books_or_none(author_id)

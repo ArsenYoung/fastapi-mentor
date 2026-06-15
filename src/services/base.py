@@ -1,7 +1,7 @@
-from src.exceptions.base import AlreadyExistsException, ObjectNotFoundException
-from sqlalchemy.exc import IntegrityError
-from typing import Mapping, Type
 import structlog
+
+from src.exceptions.already_exists_exception import AlreadyExistsException
+from src.exceptions.object_not_found_exception import ObjectNotFoundException
 
 
 class BaseService():
@@ -9,35 +9,29 @@ class BaseService():
 
     def _raise_not_found(
             self,
-            exception_cls: Type[ObjectNotFoundException] = ObjectNotFoundException,
+            message: str | None = None,
+            details: str | None = None,
             **context
     ) -> None:
         self.logger.warning(
-            exception_cls.message,
+            message or ObjectNotFoundException.message,
             **context,
         )
-        raise exception_cls()
+        raise ObjectNotFoundException(
+            message=message,
+            details=details,
+        )
 
     def _raise_already_exists(
             self,
-            exception_cls: Type[AlreadyExistsException] = AlreadyExistsException,
-            exc: Exception | None = None,
+            message: str | None = None,
+            details: str | None = None,
             **context) -> None:
         self.logger.warning(
-            exception_cls.message,
+            message or AlreadyExistsException.message,
             **context,
         )
-        if exc is None:
-            raise exception_cls()
-        raise exception_cls() from exc
-
-    def _raise_mapped_integrity_error(
-            self,
-            exc: IntegrityError,
-            constraint_map: Mapping[str, Type[AlreadyExistsException]],
-    ) -> None:
-        error_text = str(exc)
-        for constraint_name, exception_cls in constraint_map.items():
-            if constraint_name in error_text:
-                raise exception_cls() from exc
-        raise exc
+        raise AlreadyExistsException(
+            message=message,
+            details=details,
+        )

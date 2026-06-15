@@ -1,6 +1,3 @@
-from sqlalchemy.exc import IntegrityError
-
-from src.exceptions.persons_passports import PassportAlreadyExistsException, PersonNotFoundException
 from src.mappers.persons_passports import map_person_to_read, map_persons_paginated_list
 from src.repositories.person import PersonRepository
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
@@ -11,19 +8,13 @@ class PersonsPassportsService(BaseService):
     def __init__(self, repo: PersonRepository):
         self.repo = repo
 
-    def _raise_domain_error_from_integrity(self, exc: IntegrityError) -> None:
-        self._raise_already_exists(
-            PassportAlreadyExistsException,
-            exc,
-        )
-
     async def create_person_with_passport(self, data: PersonCreate) -> None:
-        try:
-            person = await self.repo.create_person_with_passport(data)
-        except IntegrityError as exc:
-            self._raise_domain_error_from_integrity(exc)
-        if person is None:
-            self._raise_not_found(PersonNotFoundException)
+        passport = await self.repo.get_passport_by_number(data.passport.number)
+        if passport is not None:
+            self._raise_already_exists(
+                message="A person with this passport number already exists",
+            )
+        person = await self.repo.create_person_with_passport(data)
         self.logger.info(
             "person_created",
             person_id=person.id,
@@ -34,7 +25,7 @@ class PersonsPassportsService(BaseService):
         person = await self.repo.get_person_with_passport(person_id)
         if person is None:
             self._raise_not_found(
-                PersonNotFoundException,
+                message="Person not found",
                 person_id=person_id,
             )
         return map_person_to_read(person)
@@ -52,7 +43,7 @@ class PersonsPassportsService(BaseService):
         person = await self.repo.delete_person_with_passport(person_id)
         if person is None:
             self._raise_not_found(
-                PersonNotFoundException,
+                message="Person not found",
                 person_id=person_id,
             )
         self.logger.info(
@@ -61,15 +52,19 @@ class PersonsPassportsService(BaseService):
         )
 
     async def update_person_with_passport(self, person_id: int, data: PersonUpdate) -> None:
-        try:
-            person = await self.repo.update_person_with_passport(person_id, data)
-        except IntegrityError as exc:
-            self._raise_domain_error_from_integrity(exc)
+        person = await self.repo.get_person_with_passport(person_id)
         if person is None:
             self._raise_not_found(
-                PersonNotFoundException,
+                message="Person not found",
                 person_id=person_id,
             )
+        if data.passport is not None and data.passport.number is not None:
+            passport = await self.repo.get_passport_by_number(data.passport.number)
+            if passport is not None and passport.person_id != person_id:
+                self._raise_already_exists(
+                    message="A person with this passport number already exists",
+                )
+        person = await self.repo.update_person_with_passport(person_id, data)
         self.logger.info(
             "person_updated",
             person_id=person.id,

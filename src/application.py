@@ -1,3 +1,4 @@
+from contextlib import AsyncExitStack
 import time
 import structlog
 
@@ -12,7 +13,9 @@ from src.logging_context import (
 from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
-from src.exceptions.base import AlreadyExistsException, AppException, ObjectNotFoundException
+from src.exceptions.already_exists_exception import AlreadyExistsException
+from src.exceptions.app_exception import AppException
+from src.exceptions.object_not_found_exception import ObjectNotFoundException
 from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
 from src.router.persons_passports import router as persons_passports_router
@@ -22,13 +25,11 @@ from src.schemas.errors import ErrorPayload, ErrorResponse
 
 def get_error_response(
     status_code: int,
-    code: str,
     message: str,
     details: str = None
 ) -> JSONResponse:
     error_response = ErrorResponse(
         error=ErrorPayload(
-            code=code,
             message=message,
             details=details
     ))
@@ -57,29 +58,20 @@ def get_app() -> FastAPI:
 
     @app.middleware("http")
     async def logging_middleware(request: Request, call_next):
-        request_id = get_new_request_id()
-        bind_request_context(request_id)
+        async with AsyncExitStack() as stack:
+            request_id = get_new_request_id()
+            bind_request_context(request_id)
+            stack.callback(clear_request_context)
 
-        start = time.perf_counter()
+            start = time.perf_counter()
 
-        logger.info(
-            "request_started",
-            method=request.method,
-            path=request.url.path,
-        )
-
-        try:
-            response = await call_next(request)
-        except Exception:
-            duration_ms = round((time.perf_counter() - start) * 1000, 2)
-            logger.exception(
-                "request_failed",
+            logger.info(
+                "request_started",
                 method=request.method,
                 path=request.url.path,
-                duration_ms=duration_ms
             )
-            raise
-        else:
+
+            response = await call_next(request)
             duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
             response.headers["X-Request-ID"] = request_id
@@ -92,8 +84,6 @@ def get_app() -> FastAPI:
                 duration_ms=duration_ms,
             )
             return response
-        finally:
-            clear_request_context()
 
     @app.exception_handler(ObjectNotFoundException)
     async def not_found_handler(
@@ -103,12 +93,10 @@ def get_app() -> FastAPI:
         logger.warning(
             "object_not_found",
             path=request.url.path,
-            error_code=getattr(exc, "code", "object_not_found_exception"),
             message=getattr(exc, "message", "Object not found")
         )
         return get_error_response(
             status_code=404,
-            code=getattr(exc, "code", "object_not_found_exception"),
             message=getattr(exc, "message", "Object not found"),
             details=getattr(exc, "details", None),
         )
@@ -121,13 +109,11 @@ def get_app() -> FastAPI:
         logger.warning(
             "already_exists",
             path=request.url.path,
-            error_code=getattr(exc, "code", "already_exists_exception"),
             message=getattr(exc, "message", "Object already exists")
         )
         return get_error_response(
             status_code=409,
-            code=getattr(exc, "code", "already_exists_exception"),
-            message=getattr(exc, "message", "A student with this record book number already exists"),
+            message=getattr(exc, "message", "Object already exists"),
             details=getattr(exc, "details", None),
         )
     
@@ -139,12 +125,10 @@ def get_app() -> FastAPI:
         logger.exception(
             "app_exception",
             path=request.url.path,
-            error_code=getattr(exc, "code", "unexpected_error"),
             message=getattr(exc, "message", "Unexpected error"),
         )
         return get_error_response(
             status_code=500,
-            code="unexpected_error",
             message="Unexpected error",
         )
 

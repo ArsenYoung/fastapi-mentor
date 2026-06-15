@@ -1,29 +1,9 @@
-from src.exceptions.authors_books import (
-    AuthorAlreadyExistsException,
-    AuthorNotFoundException,
-    BookAlreadyExistsException,
-)
-from src.exceptions.base import AlreadyExistsException, AppException, ObjectNotFoundException
-from src.exceptions.persons_passports import (
-    PassportAlreadyExistsException,
-    PersonNotFoundException,
-)
-from src.exceptions.students_courses import (
-    CourseAlreadyExistsException,
-    StudentAlreadyExistsException,
-    StudentNotFoundException,
-)
+from src.exceptions.already_exists_exception import AlreadyExistsException
+from src.exceptions.app_exception import AppException
+from src.exceptions.object_not_found_exception import ObjectNotFoundException
 
 __all__ = [
     "AlreadyExistsException",
     "AppException",
     "ObjectNotFoundException",
-    "AuthorAlreadyExistsException",
-    "AuthorNotFoundException",
-    "BookAlreadyExistsException",
-    "CourseAlreadyExistsException",
-    "PassportAlreadyExistsException",
-    "PersonNotFoundException",
-    "StudentAlreadyExistsException",
-    "StudentNotFoundException",
 ]

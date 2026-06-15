@@ -30,7 +30,13 @@ class PersonRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
 
-    async def create_person_with_passport(self, data: PersonCreate) -> PersonsOrm | None:
+    async def get_passport_by_number(self, number: str) -> PassportsOrm | None:
+        return await self.get_one(
+            PassportsOrm,
+            number=number,
+        )
+
+    async def create_person_with_passport(self, data: PersonCreate) -> PersonsOrm:
         person = await self.insert(
             first_name=data.first_name,
             last_name=data.last_name,
@@ -43,7 +49,9 @@ class PersonRepository(BaseRepository):
             )
         )
         await self.session.flush()
-        return await self._get_person_with_passport_or_none(person.id)
+        created_person = await self._get_person_with_passport_or_none(person.id)
+        assert created_person is not None
+        return created_person
 
     async def get_person_with_passport(self, person_id: int) -> PersonsOrm | None:
         return await self._get_person_with_passport_or_none(person_id)

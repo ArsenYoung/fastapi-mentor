@@ -1,10 +1,3 @@
-from sqlalchemy.exc import IntegrityError
-
-from src.exceptions.students_courses import (
-    CourseAlreadyExistsException,
-    StudentAlreadyExistsException,
-    StudentNotFoundException,
-)
 from src.mappers.students_courses import map_student_to_read, map_students_paginated_list
 from src.repositories.student import StudentRepository
 from src.schemas.courses import CourseCreate
@@ -16,11 +9,6 @@ from src.schemas.students import (
     StudentsPaginatedList,
 )
 from src.services.base import BaseService
-
-STUDENT_CONSTRAINT_ERRORS = {
-    "uq_students_record_book_number_active": StudentAlreadyExistsException,
-    "uq_courses_reestr_number_active": CourseAlreadyExistsException,
-}
 
 
 class StudentsCoursesService(BaseService):
@@ -37,14 +25,25 @@ class StudentsCoursesService(BaseService):
         for reestr_number in reestr_numbers:
             if reestr_number in seen_numbers:
                 self._raise_already_exists(
-                    CourseAlreadyExistsException,
+                    message="A course with this reestr number already exists",
                     student_id=student_id,
                     reestr_number=reestr_number,
                 )
             seen_numbers.add(reestr_number)
 
-    def _raise_domain_error_from_integrity(self, exc: IntegrityError) -> None:
-        self._raise_mapped_integrity_error(exc, STUDENT_CONSTRAINT_ERRORS)
+    async def _raise_if_record_book_number_exists(
+        self,
+        record_book_number: str,
+        *,
+        exclude_student_id: int | None = None,
+    ) -> None:
+        student = await self.repo.get_by_record_book_number(record_book_number)
+        if student is None or student.id == exclude_student_id:
+            return
+        self._raise_already_exists(
+            message="A student with this record book number already exists",
+            record_book_number=record_book_number,
+        )
 
     async def _get_or_create_course(
         self,
@@ -59,24 +58,22 @@ class StudentsCoursesService(BaseService):
         self._raise_if_duplicate_course_reestr_numbers(
             [course.reestr_number for course in data.courses],
         )
-        try:
-            student = await self.repo.insert(
-                first_name=data.first_name,
-                last_name=data.last_name,
-                record_book_number=data.record_book_number,
-            )
-            for item in data.courses:
-                course = await self._get_or_create_course(item)
-                await self.repo.attach_course(student.id, course.id)
-        except IntegrityError as exc:
-            self._raise_domain_error_from_integrity(exc)
+        await self._raise_if_record_book_number_exists(data.record_book_number)
+        student = await self.repo.insert(
+            first_name=data.first_name,
+            last_name=data.last_name,
+            record_book_number=data.record_book_number,
+        )
+        for item in data.courses:
+            course = await self._get_or_create_course(item)
+            await self.repo.attach_course(student.id, course.id)
         self.logger.info("student_created", student_id=student.id)
 
     async def get_student_with_courses(self, student_id: int) -> Student:
         student = await self.repo.get_student_with_courses(student_id)
         if student is None:
             self._raise_not_found(
-                StudentNotFoundException,
+                message="Student not found",
                 student_id=student_id,
             )
         return map_student_to_read(student)
@@ -94,7 +91,7 @@ class StudentsCoursesService(BaseService):
         student = await self.repo.get_student_with_courses(student_id)
         if student is None:
             self._raise_not_found(
-                StudentNotFoundException,
+                message="Student not found",
                 student_id=student_id,
             )
         for course in student.courses:
@@ -107,7 +104,7 @@ class StudentsCoursesService(BaseService):
         student = await self.repo.get_student_with_courses(student_id)
         if student is None:
             self._raise_not_found(
-                StudentNotFoundException,
+                message="Student not found",
                 student_id=student_id,
             )
         if data.courses is not None:
@@ -115,26 +112,28 @@ class StudentsCoursesService(BaseService):
                 [course.reestr_number for course in data.courses],
                 student_id=student_id,
             )
+        if data.record_book_number is not None:
+            await self._raise_if_record_book_number_exists(
+                data.record_book_number,
+                exclude_student_id=student_id,
+            )
         student_data = data.model_dump(
             exclude_unset=True,
             exclude_none=True,
             exclude={"courses"}
         )
-        try:
-            if student_data:
-                await self.repo.update(student_id, student_data)
-            if data.courses is not None:
-                existing_course_ids = {course.id for course in student.courses}
-                target_course_ids: set[int] = set()
-                for item in data.courses:
-                    course = await self._get_or_create_course(item)
-                    target_course_ids.add(course.id)
-                    await self.repo.attach_course(student.id, course.id)
+        if student_data:
+            await self.repo.update(student_id, student_data)
+        if data.courses is not None:
+            existing_course_ids = {course.id for course in student.courses}
+            target_course_ids: set[int] = set()
+            for item in data.courses:
+                course = await self._get_or_create_course(item)
+                target_course_ids.add(course.id)
+                await self.repo.attach_course(student.id, course.id)
 
-                course_ids_to_detach = existing_course_ids - target_course_ids
-                for course_id in course_ids_to_detach:
-                    await self.repo.detach_course(student.id, course_id)
-                    await self.repo.soft_delete_course_if_unused(course_id)
-        except IntegrityError as exc:
-            self._raise_domain_error_from_integrity(exc)
+            course_ids_to_detach = existing_course_ids - target_course_ids
+            for course_id in course_ids_to_detach:
+                await self.repo.detach_course(student.id, course_id)
+                await self.repo.soft_delete_course_if_unused(course_id)
         self.logger.info("student_updated", student_id=student.id)
