@@ -1,10 +1,7 @@
-from sqlalchemy import func, select, update
+from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from src.mappers.authors_books import (
-    map_author_with_books_to_updated_state,
-    map_book_payload_to_orm,
-)
+from src.mappers.authors_books import map_book_payload_to_orm
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
 from src.repositories.base import BaseRepository
@@ -41,19 +38,26 @@ class AuthorRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_books_by_book_codes(self, book_codes: list[str]) -> list[BooksOrm]:
+    async def get_authors_by_book_codes(self, book_codes: list[str]) -> list[AuthorsOrm]:
         if not book_codes:
             return []
         stmt = (
-            select(BooksOrm)
+            select(AuthorsOrm)
+            .join(AuthorsOrm.books)
             .where(
+                AuthorsOrm.is_deleted.is_(False),
                 BooksOrm.is_deleted.is_(False),
                 BooksOrm.book_code.in_(book_codes),
             )
-            .order_by(BooksOrm.id)
+            .options(
+                joinedload(
+                    AuthorsOrm.books.and_(BooksOrm.is_deleted.is_(False))
+                )
+            )
+            .order_by(AuthorsOrm.id)
         )
         result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.unique().scalars().all())
 
     async def create_author_with_books(
         self,
@@ -82,32 +86,3 @@ class AuthorRepository(BaseRepository):
         authors = list(result.unique().scalars().all())
         has_next = len(authors) > limit
         return authors[:limit], has_next
-
-    async def delete_author_with_books(self, author_id: int) -> AuthorsOrm | None:
-        author = await self._get_author_with_books(author_id)
-        if author is None:
-            return None
-        await self.session.execute(
-            update(BooksOrm)
-            .filter_by(author_id=author_id)
-            .values(
-                is_deleted=True,
-                updated_at=func.now(),
-            )
-        )
-        await self.delete(author_id)
-        return author
-
-    async def update_author_with_books(
-        self,
-        author_id: int,
-        author_values: dict,
-        books: list[dict[str, str]] | None,
-    ) -> AuthorsOrm | None:
-        author = await self._get_author_with_books(author_id)
-        if author is None:
-            return None
-
-        map_author_with_books_to_updated_state(author, author_values, books)
-        await self.session.flush()
-        return await self._get_author_with_books(author_id)

@@ -3,8 +3,11 @@ from src.mappers.authors_books import (
     map_author_to_read,
     map_author_update_to_payload,
     map_authors_paginated_list,
+    map_book_payload_to_orm,
     map_books_to_payloads,
 )
+from src.models.authors import AuthorsOrm
+from src.models.books import BooksOrm
 from src.repositories.author import AuthorRepository
 from src.schemas.authors import (
     Author,
@@ -33,6 +36,14 @@ class AuthorsBooksService(BaseService):
             author_code=author_code,
         )
 
+    def _raise_if_author_not_found(self, author: AuthorsOrm | None, author_id: int) -> AuthorsOrm:
+        if author is None:
+            self._raise_not_found(
+                message="Author not found",
+                author_id=author_id,
+            )
+        return author
+
     def _raise_if_duplicate_book_codes(self, book_codes: list[str], *, author_id: int | None = None) -> None:
         seen_codes: set[str] = set()
         for book_code in book_codes:
@@ -51,15 +62,62 @@ class AuthorsBooksService(BaseService):
         exclude_author_id: int | None = None,
         author_id: int | None = None,
     ) -> None:
-        existing_books = await self.repo.get_books_by_book_codes(book_codes)
-        for book in existing_books:
-            if book.author_id == exclude_author_id:
+        authors = await self.repo.get_authors_by_book_codes(book_codes)
+        for author in authors:
+            if author.id == exclude_author_id:
                 continue
-            self._raise_already_exists(
-                message="A book with this code already exists",
-                author_id=author_id,
-                book_code=book.book_code,
-            )
+            for book in author.books:
+                if book.book_code in book_codes:
+                    self._raise_already_exists(
+                        message="A book with this code already exists",
+                        author_id=author_id,
+                        book_code=book.book_code,
+                    )
+
+    def _get_author_book_changes(
+        self,
+        author: AuthorsOrm,
+        books_data: list[dict[str, str]],
+    ) -> tuple[list[dict[str, str]], list[tuple[BooksOrm, str]], list[BooksOrm]]:
+        existing_books_by_code = {
+            book.book_code: book
+            for book in author.books
+        }
+        target_codes = {book_data["book_code"] for book_data in books_data}
+        books_to_create = []
+        books_to_update = []
+
+        for book_data in books_data:
+            existing_book = existing_books_by_code.get(book_data["book_code"])
+            if existing_book is None:
+                books_to_create.append(book_data)
+                continue
+            books_to_update.append((existing_book, book_data["title"]))
+
+        books_to_delete = [
+            book
+            for book in author.books
+            if book.book_code not in target_codes
+        ]
+        return books_to_create, books_to_update, books_to_delete
+
+    async def _apply_author_book_changes(
+        self,
+        author: AuthorsOrm,
+        books_to_create: list[dict[str, str]],
+        books_to_update: list[tuple[BooksOrm, str]],
+        books_to_delete: list[BooksOrm],
+    ) -> None:
+        author.books.extend(
+            map_book_payload_to_orm(author.id, book_data)
+            for book_data in books_to_create
+        )
+        for book, title in books_to_update:
+            book.title = title
+            book.is_deleted = False
+        for book in books_to_delete:
+            book.is_deleted = True
+        await self.repo.flush()
 
     async def create_author_with_books(self, data: AuthorCreate) -> None:
         await self._raise_if_author_code_exists(data.author_code)
@@ -73,11 +131,7 @@ class AuthorsBooksService(BaseService):
 
     async def get_author_with_books(self, author_id: int) -> Author:
         author = await self.repo.get_author_with_books(author_id)
-        if author is None:
-            self._raise_not_found(
-                message="Author not found",
-                author_id=author_id,
-            )
+        author = self._raise_if_author_not_found(author, author_id)
         return map_author_to_read(author)
 
     async def get_authors_with_books_paginated_list(self, limit: int, offset: int) -> AuthorsPaginatedList:
@@ -93,23 +147,18 @@ class AuthorsBooksService(BaseService):
         )
 
     async def delete_author_with_books(self, author_id: int) -> None:
-        author = await self.repo.delete_author_with_books(author_id)
-        if author is None:
-            self._raise_not_found(
-                message="Author not found",
-                author_id=author_id,
-            )
+        author = await self.repo.get_author_with_books(author_id)
+        author = self._raise_if_author_not_found(author, author_id)
+        for book in author.books:
+            book.is_deleted = True
+        await self.repo.delete(author.id)
+        await self.repo.flush()
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update_author_with_books(self, author_id: int, data: AuthorUpdate) -> None:
         author = await self.repo.get_author_with_books(author_id)
-        if author is None:
-            self._raise_not_found(
-                message="Author not found",
-                author_id=author_id,
-            )
+        author = self._raise_if_author_not_found(author, author_id)
         author_data = map_author_update_to_payload(data)
-        books_data = None
         if data.author_code is not None:
             await self._raise_if_author_code_exists(
                 data.author_code,
@@ -125,10 +174,16 @@ class AuthorsBooksService(BaseService):
                 exclude_author_id=author_id,
                 author_id=author_id,
             )
-            books_data = map_books_to_payloads(data.books)
-        author = await self.repo.update_author_with_books(
-            author_id,
-            author_data,
-            books_data,
-        )
+        for field, value in author_data.items():
+            setattr(author, field, value)
+        if data.books is not None:
+            await self._apply_author_book_changes(
+                author,
+                *self._get_author_book_changes(
+                    author,
+                    map_books_to_payloads(data.books),
+                ),
+            )
+        elif author_data:
+            await self.repo.flush()
         self.logger.info("author_updated", author_id=author.id)

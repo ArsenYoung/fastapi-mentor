@@ -27,6 +27,9 @@ class BaseRepository(Generic[ModelT]):
         await self.session.flush()
         return instance
 
+    async def flush(self) -> None:
+        await self.session.flush()
+
     async def update(self, entity_id: int, values: dict[str, Any]) -> None:
         await self.session.execute(
             update(self.model)

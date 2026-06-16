@@ -40,43 +40,6 @@ def map_book_payload_to_orm(author_id: int, payload: dict[str, str]) -> BooksOrm
     )
 
 
-def map_author_with_books_to_updated_state(
-    author: AuthorsOrm,
-    author_payload: dict[str, str],
-    books_payloads: list[dict[str, str]] | None,
-) -> AuthorsOrm:
-    for field, value in author_payload.items():
-        setattr(author, field, value)
-
-    if books_payloads is None:
-        return author
-
-    existing_books_by_code = {
-        book.book_code: book
-        for book in author.books
-    }
-    target_codes = {book_payload["book_code"] for book_payload in books_payloads}
-    for book in author.books:
-        if book.book_code not in target_codes:
-            book.is_deleted = True
-
-    for book_payload in books_payloads:
-        existing_book = existing_books_by_code.get(book_payload["book_code"])
-        if existing_book is None:
-            author.books.append(map_book_payload_to_orm(author.id, book_payload))
-            continue
-        _map_book_to_updated_state(existing_book, book_payload)
-    return author
-
-
-def _map_book_to_updated_state(
-    existing_book: BooksOrm,
-    payload: dict[str, str],
-) -> None:
-    existing_book.title = payload["title"]
-    existing_book.is_deleted = False
-
-
 def map_book_to_read(book: BooksOrm) -> Book:
     return Book(
         id=book.id,
