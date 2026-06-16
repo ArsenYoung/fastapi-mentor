@@ -35,6 +35,15 @@ def map_course_to_payload(
     }
 
 
+def map_courses_to_payloads(
+    courses: list[CourseCreate] | list[StudentCourseUpdateRequest],
+) -> list[dict[str, str]]:
+    return [
+        map_course_to_payload(course)
+        for course in courses
+    ]
+
+
 def map_course_payload_to_orm(payload: dict[str, str]) -> CoursesOrm:
     return CoursesOrm(
         reestr_number=payload["reestr_number"],

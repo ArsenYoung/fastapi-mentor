@@ -1,8 +1,8 @@
 from sqlalchemy import exists, func, select, update
 
 from src.mappers.students_courses import (
+    map_courses_to_payloads,
     map_course_payload_to_orm,
-    map_course_to_payload,
     map_student_create_to_payload,
     map_student_to_read,
     map_student_update_to_payload,
@@ -12,11 +12,9 @@ from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
 from src.models.students_courses import StudentsCoursesOrm
 from src.repositories.student import StudentRepository
-from src.schemas.courses import CourseCreate
 from src.schemas.students import (
     Student,
     StudentCreate,
-    StudentCourseUpdateRequest,
     StudentUpdate,
     StudentsPaginatedList,
 )
@@ -57,11 +55,7 @@ class StudentsCoursesService(BaseService):
             record_book_number=record_book_number,
         )
 
-    async def _get_or_create_course(
-        self,
-        data: CourseCreate | StudentCourseUpdateRequest,
-    ) -> CoursesOrm:
-        course_data = map_course_to_payload(data)
+    async def _get_or_create_course(self, course_data: dict[str, str]) -> CoursesOrm:
         reestr_number = course_data["reestr_number"]
         title = course_data["title"]
 
@@ -125,13 +119,14 @@ class StudentsCoursesService(BaseService):
         )
 
     async def create_student_with_courses(self, data: StudentCreate) -> None:
+        courses_data = map_courses_to_payloads(data.courses)
         self._raise_if_duplicate_course_reestr_numbers(
-            [course.reestr_number for course in data.courses],
+            [course["reestr_number"] for course in courses_data],
         )
         await self._raise_if_record_book_number_exists(data.record_book_number)
         student = await self.repo.create(**map_student_create_to_payload(data))
-        for item in data.courses:
-            course = await self._get_or_create_course(item)
+        for course_data in courses_data:
+            course = await self._get_or_create_course(course_data)
             await self._attach_course(student, course)
         self.logger.info("student_created", student_id=student.id)
 
@@ -179,9 +174,14 @@ class StudentsCoursesService(BaseService):
                 message="Student not found",
                 student_id=student_id,
             )
-        if data.courses is not None:
+        courses_data = (
+            map_courses_to_payloads(data.courses)
+            if data.courses is not None
+            else None
+        )
+        if courses_data is not None:
             self._raise_if_duplicate_course_reestr_numbers(
-                [course.reestr_number for course in data.courses],
+                [course["reestr_number"] for course in courses_data],
                 student_id=student_id,
             )
         if data.record_book_number is not None:
@@ -192,11 +192,11 @@ class StudentsCoursesService(BaseService):
         student_data = map_student_update_to_payload(data)
         if student_data:
             await self.repo.update(student_id, student_data)
-        if data.courses is not None:
+        if courses_data is not None:
             existing_course_ids = {course.id for course in student.courses}
             target_course_ids: set[int] = set()
-            for item in data.courses:
-                course = await self._get_or_create_course(item)
+            for course_data in courses_data:
+                course = await self._get_or_create_course(course_data)
                 target_course_ids.add(course.id)
                 await self._attach_course(student, course)
 

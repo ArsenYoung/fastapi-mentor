@@ -16,8 +16,10 @@ from src.mappers.persons_passports import (
     map_persons_paginated_list,
 )
 from src.mappers.students_courses import (
+    map_course_to_read,
     map_course_payload_to_orm,
     map_course_to_payload,
+    map_courses_to_payloads,
     map_student_create_to_payload,
     map_student_to_read,
     map_student_update_to_payload,
@@ -31,8 +33,10 @@ __all__ = [
     "map_authors_paginated_list",
     "map_book_payload_to_orm",
     "map_books_to_payloads",
+    "map_course_to_read",
     "map_course_payload_to_orm",
     "map_course_to_payload",
+    "map_courses_to_payloads",
     "map_passport_create_to_orm",
     "map_passport_to_read",
     "map_passport_update_to_payload",
