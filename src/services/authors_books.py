@@ -159,29 +159,33 @@ class AuthorsBooksService(BaseService):
         author = await self.repo.get_author_with_books(author_id)
         author = self._raise_if_author_not_found(author, author_id)
         author_data = map_author_update_to_payload(data)
+        books_payload = map_books_to_payloads(data.books) if data.books is not None else None
+        book_codes = [book["book_code"] for book in books_payload] if books_payload is not None else None
+
         if data.author_code is not None:
             await self._raise_if_author_code_exists(
                 data.author_code,
                 exclude_author_id=author_id,
             )
-        if data.books is not None:
+        if book_codes is not None:
             self._raise_if_duplicate_book_codes(
-                [book.book_code for book in data.books],
+                book_codes,
                 author_id=author_id,
             )
             await self._raise_if_book_codes_exist(
-                [book.book_code for book in data.books],
+                book_codes,
                 exclude_author_id=author_id,
                 author_id=author_id,
             )
+
         for field, value in author_data.items():
             setattr(author, field, value)
-        if data.books is not None:
+        if books_payload is not None:
             await self._apply_author_book_changes(
                 author,
                 *self._get_author_book_changes(
                     author,
-                    map_books_to_payloads(data.books),
+                    books_payload,
                 ),
             )
         elif author_data:
