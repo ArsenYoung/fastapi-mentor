@@ -122,6 +122,16 @@ class StudentsCoursesService(BaseService):
             )
         await self.repo.flush()
 
+    async def _create_course_link(self, student_id: int, course_id: int) -> None:
+        await self._acquire_advisory_lock(f"course-links:{course_id}")
+        self.repo.session.add(
+            StudentsCoursesOrm(
+                student_id=student_id,
+                course_id=course_id,
+            )
+        )
+        await self.repo.flush()
+
     async def _detach_course(self, student: StudentsOrm, course: CoursesOrm) -> None:
         link = self._get_course_link(student, course.id)
         if link is None or link.is_deleted:
@@ -157,7 +167,7 @@ class StudentsCoursesService(BaseService):
         student = await self.repo.create(**map_student_create_to_payload(data))
         for course_data in courses_data:
             course = await self._get_or_create_course(course_data)
-            await self._attach_course(student, course)
+            await self._create_course_link(student.id, course.id)
         self.logger.info("student_created", student_id=student.id)
 
     async def get_student_with_courses(self, student_id: int) -> Student:
