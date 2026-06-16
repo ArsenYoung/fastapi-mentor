@@ -1,4 +1,10 @@
-from src.mappers.persons_passports import map_person_to_read, map_persons_paginated_list
+from src.mappers.persons_passports import (
+    map_passport_update_to_payload,
+    map_person_create_to_person_payload,
+    map_person_to_read,
+    map_person_update_to_person_payload,
+    map_persons_paginated_list,
+)
 from src.repositories.person import PersonRepository
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
 from src.services.base import BaseService
@@ -14,11 +20,10 @@ class PersonsPassportsService(BaseService):
             self._raise_already_exists(
                 message="A person with this passport number already exists",
             )
+        person_data = map_person_create_to_person_payload(data)
         person = await self.repo.create_person_with_passport(
-            first_name=data.first_name,
-            last_name=data.last_name,
-            passport_number=data.passport.number,
-            registrated_in=data.passport.registrated_in,
+            person_data=person_data,
+            passport_data=data.passport,
         )
         self.logger.info(
             "person_created",
@@ -64,11 +69,7 @@ class PersonsPassportsService(BaseService):
                 person_id=person_id,
             )
 
-        person_data = data.model_dump(
-            exclude_unset=True,
-            exclude_none=True,
-            exclude={"passport"},
-        )
+        person_data = map_person_update_to_person_payload(data)
         passport_data = {}
         if data.passport is not None and data.passport.number is not None:
             passport = await self.repo.get_passport_by_number(data.passport.number)
@@ -77,10 +78,7 @@ class PersonsPassportsService(BaseService):
                     message="A person with this passport number already exists",
                 )
         if data.passport is not None:
-            passport_data = data.passport.model_dump(
-                exclude_unset=True,
-                exclude_none=True,
-            )
+            passport_data = map_passport_update_to_payload(data.passport)
         person = await self.repo.update_person_with_passport(
             person_id,
             person_data,

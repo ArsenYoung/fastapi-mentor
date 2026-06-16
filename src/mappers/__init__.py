@@ -1,17 +1,47 @@
-from src.mappers.authors_books import map_author_to_read, map_authors_paginated_list
+from src.mappers.authors_books import (
+    map_author_create_to_payload,
+    map_author_to_read,
+    map_author_update_to_payload,
+    map_authors_paginated_list,
+    map_book_payload_to_orm,
+    map_books_to_payloads,
+)
 from src.mappers.persons_passports import (
+    map_passport_create_to_orm,
     map_passport_to_read,
+    map_passport_update_to_payload,
+    map_person_create_to_person_payload,
     map_person_to_read,
+    map_person_update_to_person_payload,
     map_persons_paginated_list,
 )
-from src.mappers.students_courses import map_student_to_read, map_students_paginated_list
+from src.mappers.students_courses import (
+    map_course_payload_to_orm,
+    map_course_to_payload,
+    map_student_create_to_payload,
+    map_student_to_read,
+    map_student_update_to_payload,
+    map_students_paginated_list,
+)
 
 __all__ = [
+    "map_author_create_to_payload",
     "map_author_to_read",
+    "map_author_update_to_payload",
     "map_authors_paginated_list",
+    "map_book_payload_to_orm",
+    "map_books_to_payloads",
+    "map_course_payload_to_orm",
+    "map_course_to_payload",
+    "map_passport_create_to_orm",
     "map_passport_to_read",
+    "map_passport_update_to_payload",
+    "map_person_create_to_person_payload",
     "map_person_to_read",
+    "map_person_update_to_person_payload",
     "map_persons_paginated_list",
+    "map_student_create_to_payload",
     "map_student_to_read",
+    "map_student_update_to_payload",
     "map_students_paginated_list",
 ]

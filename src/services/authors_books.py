@@ -1,4 +1,10 @@
-from src.mappers.authors_books import map_author_to_read, map_authors_paginated_list
+from src.mappers.authors_books import (
+    map_author_create_to_payload,
+    map_author_to_read,
+    map_author_update_to_payload,
+    map_authors_paginated_list,
+    map_books_to_payloads,
+)
 from src.repositories.author import AuthorRepository
 from src.schemas.authors import (
     Author,
@@ -60,16 +66,8 @@ class AuthorsBooksService(BaseService):
         self._raise_if_duplicate_book_codes([book.book_code for book in data.books])
         await self._raise_if_book_codes_exist([book.book_code for book in data.books])
         author = await self.repo.create_author_with_books(
-            author_code=data.author_code,
-            first_name=data.first_name,
-            last_name=data.last_name,
-            books=[
-                {
-                    "book_code": book.book_code,
-                    "title": book.title,
-                }
-                for book in data.books
-            ],
+            author_data=map_author_create_to_payload(data),
+            books_data=map_books_to_payloads(data.books),
         )
         self.logger.info("author_created", author_id=author.id)
 
@@ -110,11 +108,7 @@ class AuthorsBooksService(BaseService):
                 message="Author not found",
                 author_id=author_id,
             )
-        author_data = data.model_dump(
-            exclude_unset=True,
-            exclude_none=True,
-            exclude={"books"},
-        )
+        author_data = map_author_update_to_payload(data)
         books_data = None
         if data.author_code is not None:
             await self._raise_if_author_code_exists(
@@ -131,13 +125,7 @@ class AuthorsBooksService(BaseService):
                 exclude_author_id=author_id,
                 author_id=author_id,
             )
-            books_data = [
-                {
-                    "book_code": book.book_code,
-                    "title": book.title,
-                }
-                for book in data.books
-            ]
+            books_data = map_books_to_payloads(data.books)
         author = await self.repo.update_author_with_books(
             author_id,
             author_data,

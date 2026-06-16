@@ -1,4 +1,10 @@
-from src.mappers.students_courses import map_student_to_read, map_students_paginated_list
+from src.mappers.students_courses import (
+    map_course_to_payload,
+    map_student_create_to_payload,
+    map_student_to_read,
+    map_student_update_to_payload,
+    map_students_paginated_list,
+)
 from src.repositories.student import StudentRepository
 from src.schemas.courses import CourseCreate
 from src.schemas.students import (
@@ -49,21 +55,14 @@ class StudentsCoursesService(BaseService):
         self,
         data: CourseCreate | StudentCourseUpdateRequest,
     ):
-        return await self.repo.get_or_create_course(
-            reestr_number=data.reestr_number,
-            title=data.title,
-        )
+        return await self.repo.get_or_create_course(map_course_to_payload(data))
 
     async def create_student_with_courses(self, data: StudentCreate) -> None:
         self._raise_if_duplicate_course_reestr_numbers(
             [course.reestr_number for course in data.courses],
         )
         await self._raise_if_record_book_number_exists(data.record_book_number)
-        student = await self.repo.create(
-            first_name=data.first_name,
-            last_name=data.last_name,
-            record_book_number=data.record_book_number,
-        )
+        student = await self.repo.create(**map_student_create_to_payload(data))
         for item in data.courses:
             course = await self._get_or_create_course(item)
             await self.repo.attach_course(student.id, course.id)
@@ -117,11 +116,7 @@ class StudentsCoursesService(BaseService):
                 data.record_book_number,
                 exclude_student_id=student_id,
             )
-        student_data = data.model_dump(
-            exclude_unset=True,
-            exclude_none=True,
-            exclude={"courses"}
-        )
+        student_data = map_student_update_to_payload(data)
         if student_data:
             await self.repo.update(student_id, student_data)
         if data.courses is not None:
