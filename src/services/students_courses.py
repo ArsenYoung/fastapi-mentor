@@ -1,10 +1,16 @@
+from sqlalchemy import exists, func, select, update
+
 from src.mappers.students_courses import (
+    map_course_payload_to_orm,
     map_course_to_payload,
     map_student_create_to_payload,
     map_student_to_read,
     map_student_update_to_payload,
     map_students_paginated_list,
 )
+from src.models.courses import CoursesOrm
+from src.models.students import StudentsOrm
+from src.models.students_courses import StudentsCoursesOrm
 from src.repositories.student import StudentRepository
 from src.schemas.courses import CourseCreate
 from src.schemas.students import (
@@ -54,8 +60,69 @@ class StudentsCoursesService(BaseService):
     async def _get_or_create_course(
         self,
         data: CourseCreate | StudentCourseUpdateRequest,
-    ):
-        return await self.repo.get_or_create_course(map_course_to_payload(data))
+    ) -> CoursesOrm:
+        course_data = map_course_to_payload(data)
+        reestr_number = course_data["reestr_number"]
+        title = course_data["title"]
+
+        await self._acquire_advisory_lock(f"course:{reestr_number}")
+        course = await self._get_course_by_reestr_number(reestr_number)
+        if course is None:
+            return await self._create_course(course_data)
+        if course.title != title:
+            course.title = title
+            await self.repo.flush()
+        return course
+
+    async def _get_course_by_reestr_number(
+        self, reestr_number: str
+    ) -> CoursesOrm | None:
+        stmt = select(CoursesOrm).where(
+            CoursesOrm.is_deleted.is_(False),
+            CoursesOrm.reestr_number == reestr_number,
+        )
+        result = await self.repo.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def _acquire_advisory_lock(self, lock_key: str) -> None:
+        await self.repo.session.execute(
+            select(func.pg_advisory_xact_lock(func.hashtext(lock_key)))
+        )
+
+    async def _create_course(self, course_data: dict[str, str]) -> CoursesOrm:
+        course = map_course_payload_to_orm(course_data)
+        self.repo.session.add(course)
+        await self.repo.flush()
+        return course
+
+    async def _attach_course(self, student: StudentsOrm, course: CoursesOrm) -> None:
+        if course in student.courses:
+            return
+        await self._acquire_advisory_lock(f"course-links:{course.id}")
+        student.courses.append(course)
+        await self.repo.flush()
+
+    async def _detach_course(self, student: StudentsOrm, course: CoursesOrm) -> None:
+        if course not in student.courses:
+            return
+        await self._acquire_advisory_lock(f"course-links:{course.id}")
+        student.courses.remove(course)
+        await self.repo.flush()
+
+    async def _delete_course_if_unused(self, course_id: int) -> None:
+        await self._acquire_advisory_lock(f"course-links:{course_id}")
+        await self.repo.session.execute(
+            update(CoursesOrm)
+            .where(
+                CoursesOrm.id == course_id,
+                CoursesOrm.is_deleted.is_(False),
+                ~exists().where(StudentsCoursesOrm.course_id == CoursesOrm.id),
+            )
+            .values(
+                is_deleted=True,
+                updated_at=func.now(),
+            )
+        )
 
     async def create_student_with_courses(self, data: StudentCreate) -> None:
         self._raise_if_duplicate_course_reestr_numbers(
@@ -65,7 +132,7 @@ class StudentsCoursesService(BaseService):
         student = await self.repo.create(**map_student_create_to_payload(data))
         for item in data.courses:
             course = await self._get_or_create_course(item)
-            await self.repo.attach_course(student.id, course.id)
+            await self._attach_course(student, course)
         self.logger.info("student_created", student_id=student.id)
 
     async def get_student_with_courses(self, student_id: int) -> Student:
@@ -76,9 +143,13 @@ class StudentsCoursesService(BaseService):
                 student_id=student_id,
             )
         return map_student_to_read(student)
-    
-    async def get_students_with_courses_paginated_list(self, limit: int, offset: int) -> StudentsPaginatedList:
-        students, has_next = await self.repo.get_students_with_courses_paginated_list(limit, offset)
+
+    async def get_students_with_courses_paginated_list(
+        self, limit: int, offset: int
+    ) -> StudentsPaginatedList:
+        students, has_next = await self.repo.get_students_with_courses_paginated_list(
+            limit, offset
+        )
         return map_students_paginated_list(
             students,
             has_next=has_next,
@@ -93,13 +164,15 @@ class StudentsCoursesService(BaseService):
                 message="Student not found",
                 student_id=student_id,
             )
-        for course in student.courses:
-            await self.repo.detach_course(student_id, course.id)
-            await self.repo.delete_course_if_unused(course.id)
+        for course in list(student.courses):
+            await self._detach_course(student, course)
+            await self._delete_course_if_unused(course.id)
         await self.repo.delete(student_id)
         self.logger.info("student_deleted", student_id=student.id)
 
-    async def update_student_with_courses(self, student_id: int, data: StudentUpdate) -> None:
+    async def update_student_with_courses(
+        self, student_id: int, data: StudentUpdate
+    ) -> None:
         student = await self.repo.get_student_with_courses(student_id)
         if student is None:
             self._raise_not_found(
@@ -125,10 +198,15 @@ class StudentsCoursesService(BaseService):
             for item in data.courses:
                 course = await self._get_or_create_course(item)
                 target_course_ids.add(course.id)
-                await self.repo.attach_course(student.id, course.id)
+                await self._attach_course(student, course)
 
             course_ids_to_detach = existing_course_ids - target_course_ids
-            for course_id in course_ids_to_detach:
-                await self.repo.detach_course(student.id, course_id)
-                await self.repo.delete_course_if_unused(course_id)
+            courses_to_detach = [
+                course
+                for course in student.courses
+                if course.id in course_ids_to_detach
+            ]
+            for course in courses_to_detach:
+                await self._detach_course(student, course)
+                await self._delete_course_if_unused(course.id)
         self.logger.info("student_updated", student_id=student.id)
