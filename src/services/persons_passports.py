@@ -45,12 +45,13 @@ class PersonsPassportsService(BaseService):
         await self._raise_if_passport_number_exists(data.passport.number)
         person_data = map_person_create_to_person_payload(data)
         person = await self.repo.create(**person_data)
-        person.passport = map_passport_create_to_orm(data.passport, person.id)
+        passport = map_passport_create_to_orm(data.passport, person.id)
+        self.repo.session.add(passport)
         await self.repo.flush()
         self.logger.info(
             "person_created",
             person_id=person.id,
-            passport_id=person.passport.id,
+            passport_id=passport.id,
         )
 
     async def get_person_with_passport(self, person_id: int) -> Person:
