@@ -33,6 +33,7 @@ class AuthorsBooksService(BaseService):
             return
         self._raise_already_exists(
             message="An author with this code already exists",
+            details={"author_code": author_code},
             author_code=author_code,
         )
 
@@ -40,6 +41,7 @@ class AuthorsBooksService(BaseService):
         if author is None:
             self._raise_not_found(
                 message="Author not found",
+                details={"author_id": author_id},
                 author_id=author_id,
             )
         return author
@@ -50,6 +52,7 @@ class AuthorsBooksService(BaseService):
             if book_code in seen_codes:
                 self._raise_already_exists(
                     message="A book with this code already exists",
+                    details={"book_code": book_code},
                     author_id=author_id,
                     book_code=book_code,
                 )
@@ -62,17 +65,24 @@ class AuthorsBooksService(BaseService):
         exclude_author_id: int | None = None,
         author_id: int | None = None,
     ) -> None:
+        target_book_codes = set(book_codes)
         authors = await self.repo.get_authors_by_book_codes(book_codes)
         for author in authors:
-            if author.id == exclude_author_id:
-                continue
             for book in author.books:
-                if book.book_code in book_codes:
-                    self._raise_already_exists(
-                        message="A book with this code already exists",
-                        author_id=author_id,
-                        book_code=book.book_code,
-                    )
+                if book.book_code not in target_book_codes:
+                    continue
+                if (
+                    exclude_author_id is not None
+                    and author.id == exclude_author_id
+                    and not book.is_deleted
+                ):
+                    continue
+                self._raise_already_exists(
+                    message="A book with this code already exists",
+                    details={"book_code": book.book_code},
+                    author_id=author_id,
+                    book_code=book.book_code,
+                )
 
     def _get_author_book_changes(
         self,

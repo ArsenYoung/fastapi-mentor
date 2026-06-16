@@ -32,7 +32,6 @@ class StudentRepository(BaseRepository):
         record_book_number: str,
     ) -> StudentsOrm | None:
         stmt = select(StudentsOrm).where(
-            StudentsOrm.is_deleted.is_(False),
             StudentsOrm.record_book_number == record_book_number,
         )
         result = await self.session.execute(stmt)

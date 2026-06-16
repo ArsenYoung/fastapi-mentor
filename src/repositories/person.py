@@ -31,14 +31,10 @@ class PersonRepository(BaseRepository):
             select(PersonsOrm)
             .join(PersonsOrm.passport)
             .where(
-                PersonsOrm.is_deleted.is_(False),
-                PassportsOrm.is_deleted.is_(False),
                 PassportsOrm.number == number,
             )
             .options(
-                joinedload(
-                    PersonsOrm.passport.and_(PassportsOrm.is_deleted.is_(False))
-                )
+                joinedload(PersonsOrm.passport)
             )
         )
         result = await self.session.execute(stmt)

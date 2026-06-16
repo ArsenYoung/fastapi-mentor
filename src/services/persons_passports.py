@@ -21,6 +21,7 @@ class PersonsPassportsService(BaseService):
         if person is None:
             self._raise_not_found(
                 message="Person not found",
+                details={"person_id": person_id},
                 person_id=person_id,
             )
         return person
@@ -36,6 +37,8 @@ class PersonsPassportsService(BaseService):
             return
         self._raise_already_exists(
             message="A person with this passport number already exists",
+            details={"passport_number": passport_number},
+            passport_number=passport_number,
         )
 
     async def create_person_with_passport(self, data: PersonCreate) -> None:

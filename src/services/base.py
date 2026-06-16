@@ -10,7 +10,7 @@ class BaseService():
     def _raise_not_found(
             self,
             message: str | None = None,
-            details: str | None = None,
+            details: dict | list | str | None = None,
             **context
     ) -> None:
         self.logger.warning(
@@ -25,7 +25,7 @@ class BaseService():
     def _raise_already_exists(
             self,
             message: str | None = None,
-            details: str | None = None,
+            details: dict | list | str | None = None,
             **context) -> None:
         self.logger.warning(
             message or AlreadyExistsException.message,

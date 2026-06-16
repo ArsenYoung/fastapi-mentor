@@ -31,7 +31,6 @@ class AuthorRepository(BaseRepository):
         stmt = (
             select(AuthorsOrm)
             .where(
-                AuthorsOrm.is_deleted.is_(False),
                 AuthorsOrm.author_code == author_code,
             )
         )
@@ -45,15 +44,12 @@ class AuthorRepository(BaseRepository):
             select(AuthorsOrm)
             .join(AuthorsOrm.books)
             .where(
-                AuthorsOrm.is_deleted.is_(False),
-                BooksOrm.is_deleted.is_(False),
                 BooksOrm.book_code.in_(book_codes),
             )
             .options(
-                joinedload(
-                    AuthorsOrm.books.and_(BooksOrm.is_deleted.is_(False))
-                )
+                joinedload(AuthorsOrm.books)
             )
+            .execution_options(populate_existing=True)
             .order_by(AuthorsOrm.id)
         )
         result = await self.session.execute(stmt)

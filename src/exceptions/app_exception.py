@@ -6,7 +6,7 @@ class AppException(Exception):
         self,
         *,
         message: str | None = None,
-        details: str | None = None,
+        details: dict | list | str | None = None,
     ):
         if message is not None:
             self.message = message
