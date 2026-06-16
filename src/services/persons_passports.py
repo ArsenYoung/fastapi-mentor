@@ -1,10 +1,12 @@
 from src.mappers.persons_passports import (
+    map_passport_create_to_orm,
     map_passport_update_to_payload,
     map_person_create_to_person_payload,
     map_person_to_read,
     map_person_update_to_person_payload,
     map_persons_paginated_list,
 )
+from src.models.persons import PersonsOrm
 from src.repositories.person import PersonRepository
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
 from src.services.base import BaseService
@@ -14,17 +16,34 @@ class PersonsPassportsService(BaseService):
     def __init__(self, repo: PersonRepository):
         self.repo = repo
 
-    async def create_person_with_passport(self, data: PersonCreate) -> None:
-        passport = await self.repo.get_passport_by_number(data.passport.number)
-        if passport is not None:
-            self._raise_already_exists(
-                message="A person with this passport number already exists",
+    async def _get_existing_person(self, person_id: int) -> PersonsOrm:
+        person = await self.repo.get_person_with_passport(person_id)
+        if person is None:
+            self._raise_not_found(
+                message="Person not found",
+                person_id=person_id,
             )
-        person_data = map_person_create_to_person_payload(data)
-        person = await self.repo.create_person_with_passport(
-            person_data=person_data,
-            passport_data=data.passport,
+        return person
+
+    async def _raise_if_passport_number_exists(
+        self,
+        passport_number: str,
+        *,
+        exclude_person_id: int | None = None,
+    ) -> None:
+        person = await self.repo.get_person_by_passport_number(passport_number)
+        if person is None or person.id == exclude_person_id:
+            return
+        self._raise_already_exists(
+            message="A person with this passport number already exists",
         )
+
+    async def create_person_with_passport(self, data: PersonCreate) -> None:
+        await self._raise_if_passport_number_exists(data.passport.number)
+        person_data = map_person_create_to_person_payload(data)
+        person = await self.repo.create(**person_data)
+        person.passport = map_passport_create_to_orm(data.passport, person.id)
+        await self.repo.flush()
         self.logger.info(
             "person_created",
             person_id=person.id,
@@ -32,12 +51,7 @@ class PersonsPassportsService(BaseService):
         )
 
     async def get_person_with_passport(self, person_id: int) -> Person:
-        person = await self.repo.get_person_with_passport(person_id)
-        if person is None:
-            self._raise_not_found(
-                message="Person not found",
-                person_id=person_id,
-            )
+        person = await self._get_existing_person(person_id)
         return map_person_to_read(person)
 
     async def get_persons_with_passports_paginated_list(self, limit: int, offset: int) -> PersonsPaginatedList:
@@ -50,40 +64,31 @@ class PersonsPassportsService(BaseService):
         )
 
     async def delete_person_with_passport(self, person_id: int) -> None:
-        person = await self.repo.delete_person_with_passport(person_id)
-        if person is None:
-            self._raise_not_found(
-                message="Person not found",
-                person_id=person_id,
-            )
+        person = await self._get_existing_person(person_id)
+        person.passport.is_deleted = True
+        await self.repo.delete(person.id)
+        await self.repo.flush()
         self.logger.info(
             "person_deleted",
             person_id=person.id,
         )
 
     async def update_person_with_passport(self, person_id: int, data: PersonUpdate) -> None:
-        person = await self.repo.get_person_with_passport(person_id)
-        if person is None:
-            self._raise_not_found(
-                message="Person not found",
-                person_id=person_id,
-            )
+        person = await self._get_existing_person(person_id)
 
         person_data = map_person_update_to_person_payload(data)
-        passport_data = {}
-        if data.passport is not None and data.passport.number is not None:
-            passport = await self.repo.get_passport_by_number(data.passport.number)
-            if passport is not None and passport.person_id != person_id:
-                self._raise_already_exists(
-                    message="A person with this passport number already exists",
-                )
+        for field, value in person_data.items():
+            setattr(person, field, value)
         if data.passport is not None:
+            if data.passport.number is not None:
+                await self._raise_if_passport_number_exists(
+                    data.passport.number,
+                    exclude_person_id=person_id,
+                )
             passport_data = map_passport_update_to_payload(data.passport)
-        person = await self.repo.update_person_with_passport(
-            person_id,
-            person_data,
-            passport_data,
-        )
+            for field, value in passport_data.items():
+                setattr(person.passport, field, value)
+        await self.repo.flush()
         self.logger.info(
             "person_updated",
             person_id=person.id,
