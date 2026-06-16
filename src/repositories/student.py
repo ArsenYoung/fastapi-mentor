@@ -1,7 +1,9 @@
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 
+from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
+from src.models.students_courses import StudentsCoursesOrm
 from src.repositories.base import BaseRepository
 
 
@@ -12,7 +14,11 @@ class StudentRepository(BaseRepository):
         return (
             select(StudentsOrm)
             .where(StudentsOrm.is_deleted.is_(False))
-            .options(selectinload(StudentsOrm.courses))
+            .options(
+                selectinload(StudentsOrm.course_link).joinedload(
+                    StudentsCoursesOrm.courses.and_(CoursesOrm.is_deleted.is_(False))
+                )
+            )
             .order_by(StudentsOrm.id)
         )
 
@@ -21,7 +27,10 @@ class StudentRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
 
-    async def get_student_by_record_book_number(self, record_book_number: str) -> StudentsOrm | None:
+    async def get_student_by_record_book_number(
+        self,
+        record_book_number: str,
+    ) -> StudentsOrm | None:
         stmt = select(StudentsOrm).where(
             StudentsOrm.is_deleted.is_(False),
             StudentsOrm.record_book_number == record_book_number,

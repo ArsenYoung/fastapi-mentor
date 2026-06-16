@@ -89,18 +89,43 @@ class StudentsCoursesService(BaseService):
         await self.repo.flush()
         return course
 
+    def _get_course_link(
+        self,
+        student: StudentsOrm,
+        course_id: int,
+    ) -> StudentsCoursesOrm | None:
+        return next(
+            (
+                link
+                for link in student.course_link
+                if link.course_id == course_id
+            ),
+            None,
+        )
+
     async def _attach_course(self, student: StudentsOrm, course: CoursesOrm) -> None:
-        if course in student.courses:
+        link = self._get_course_link(student, course.id)
+        if link is not None and not link.is_deleted:
             return
         await self._acquire_advisory_lock(f"course-links:{course.id}")
-        student.courses.append(course)
+        if link is not None:
+            link.is_deleted = False
+            link.courses = course
+        else:
+            student.course_link.append(
+                StudentsCoursesOrm(
+                    course_id=course.id,
+                    courses=course,
+                )
+            )
         await self.repo.flush()
 
     async def _detach_course(self, student: StudentsOrm, course: CoursesOrm) -> None:
-        if course not in student.courses:
+        link = self._get_course_link(student, course.id)
+        if link is None or link.is_deleted:
             return
         await self._acquire_advisory_lock(f"course-links:{course.id}")
-        student.courses.remove(course)
+        link.is_deleted = True
         await self.repo.flush()
 
     async def _delete_course_if_unused(self, course_id: int) -> None:
@@ -110,7 +135,10 @@ class StudentsCoursesService(BaseService):
             .where(
                 CoursesOrm.id == course_id,
                 CoursesOrm.is_deleted.is_(False),
-                ~exists().where(StudentsCoursesOrm.course_id == CoursesOrm.id),
+                ~exists().where(
+                    StudentsCoursesOrm.course_id == CoursesOrm.id,
+                    StudentsCoursesOrm.is_deleted.is_(False),
+                ),
             )
             .values(
                 is_deleted=True,

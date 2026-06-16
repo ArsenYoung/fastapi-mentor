@@ -26,17 +26,19 @@ from src.schemas.errors import ErrorPayload, ErrorResponse
 def get_error_response(
     status_code: int,
     message: str,
-    details: str = None
+    details: dict | list | str | None = None,
 ) -> JSONResponse:
     error_response = ErrorResponse(
         error=ErrorPayload(
             message=message,
-            details=details
-    ))
+            details=details,
+        )
+    )
     return JSONResponse(
         status_code=status_code,
-        content=error_response.model_dump()
+        content=error_response.model_dump(),
     )
+
 
 def get_app() -> FastAPI:
     """

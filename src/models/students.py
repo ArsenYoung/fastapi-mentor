@@ -2,7 +2,6 @@ from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
-from src.models.students_courses import StudentsCoursesOrm
 
 
 class StudentsOrm(Base):
@@ -21,22 +20,17 @@ class StudentsOrm(Base):
     last_name: Mapped[str] = mapped_column(String(50), nullable=False)
     record_book_number: Mapped[str] = mapped_column(String(8), nullable=False)
     course_link = relationship(
-        "StudentsCoursesOrm", back_populates="students", cascade="all, delete-orphan"
+        "StudentsCoursesOrm",
+        back_populates="students",
+        cascade="all, delete-orphan",
     )
-    courses = relationship(
-        "CoursesOrm",
-        secondary=StudentsCoursesOrm.__table__,
-        primaryjoin=(
-            "and_("
-            "StudentsOrm.id == StudentsCoursesOrm.student_id, "
-            "StudentsCoursesOrm.is_deleted.is_(False)"
-            ")"
-        ),
-        secondaryjoin=(
-            "and_("
-            "CoursesOrm.id == StudentsCoursesOrm.course_id, "
-            "CoursesOrm.is_deleted.is_(False)"
-            ")"
-        ),
-        overlaps="course_link,courses,student_link,students",
-    )
+
+    @property
+    def courses(self) -> list["CoursesOrm"]:
+        return [
+            link.courses
+            for link in self.course_link
+            if not link.is_deleted
+            and link.courses is not None
+            and not link.courses.is_deleted
+        ]
