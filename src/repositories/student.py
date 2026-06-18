@@ -50,15 +50,4 @@ class StudentRepository(BaseRepository):
         students = list(result.unique().scalars().all())
         has_next = len(students) > limit
         return students[:limit], has_next
-
-    async def create(
-        self,
-        first_name: str,
-        last_name: str,
-        record_book_number: str,
-    ) -> StudentsOrm:
-        return await super().create(
-            first_name=first_name,
-            last_name=last_name,
-            record_book_number=record_book_number,
-        )
+    

@@ -55,7 +55,7 @@ docker ps
 
 ### Если порт 5532 уже занят
 
-В проекте настроен PostgreSQL на хосте `5532`. Если на этой машине уже есть другой контейнер или служба на порту `5532`, остановите его или измените порт в `docker-compose.yaml`, `.env` и `alembic.ini`.
+В проекте настроен PostgreSQL на хосте `5532`. Если на этой машине уже есть другой контейнер или служба на порту `5532`, остановите его или измените порт в `docker-compose.yaml` и `.env`.
 
 ## Работа с Poetry
 
@@ -93,10 +93,10 @@ poetry run <command>
 
 ### Проверка конфигурации
 
-В `alembic.ini` используется строка подключения:
+Alembic берет строку подключения из `.env` через `src.config.Settings`.
 
-```ini
-sqlalchemy.url = postgresql+asyncpg://mentor:123456@localhost:5532/mentor
+```env
+postgres_url=postgresql+asyncpg://<user>:<password>@localhost:5532/<db>
 ```
 
 Если Docker-сервис работает на другом порту, замените `5532` на нужный.
