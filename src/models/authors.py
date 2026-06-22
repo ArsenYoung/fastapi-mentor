@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base
@@ -25,7 +27,7 @@ class AuthorsOrm(Base):
         String(50),
         nullable=False,
     )
-    books: Mapped[list["BooksOrm"]] = relationship(
+    books: Mapped[List["BooksOrm"]] = relationship(
         "BooksOrm",
         back_populates="author",
         cascade="all, delete-orphan",

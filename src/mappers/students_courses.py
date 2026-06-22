@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
 from src.schemas.courses import Course, CourseCreate
@@ -10,7 +12,7 @@ from src.schemas.students import (
 )
 
 
-def map_student_create_to_payload(data: StudentCreate) -> dict[str, str]:
+def map_student_create_to_payload(data: StudentCreate) -> Dict[str, str]:
     return {
         "first_name": data.first_name,
         "last_name": data.last_name,
@@ -18,7 +20,7 @@ def map_student_create_to_payload(data: StudentCreate) -> dict[str, str]:
     }
 
 
-def map_student_update_to_payload(data: StudentUpdate) -> dict[str, str]:
+def map_student_update_to_payload(data: StudentUpdate) -> Dict[str, str]:
     return data.model_dump(
         exclude_unset=True,
         exclude_none=True,
@@ -28,7 +30,7 @@ def map_student_update_to_payload(data: StudentUpdate) -> dict[str, str]:
 
 def map_course_to_payload(
     data: CourseCreate | StudentCourseUpdateRequest,
-) -> dict[str, str]:
+) -> Dict[str, str]:
     return {
         "reestr_number": data.reestr_number,
         "title": data.title,
@@ -36,15 +38,15 @@ def map_course_to_payload(
 
 
 def map_courses_to_payloads(
-    courses: list[CourseCreate] | list[StudentCourseUpdateRequest],
-) -> list[dict[str, str]]:
+    courses: List[CourseCreate] | List[StudentCourseUpdateRequest],
+) -> List[Dict[str, str]]:
     return [
         map_course_to_payload(course)
         for course in courses
     ]
 
 
-def map_course_payload_to_orm(payload: dict[str, str]) -> CoursesOrm:
+def map_course_payload_to_orm(payload: Dict[str, str]) -> CoursesOrm:
     return CoursesOrm(
         reestr_number=payload["reestr_number"],
         title=payload["title"],
@@ -70,7 +72,7 @@ def map_student_to_read(student: StudentsOrm) -> Student:
 
 
 def map_students_paginated_list(
-    students: list[StudentsOrm],
+    students: List[StudentsOrm],
     *,
     has_next: bool,
     limit: int,

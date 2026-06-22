@@ -1,3 +1,6 @@
+from typing import Dict, List
+
+
 class AppException(Exception):
     message = "Unexpected error"
     details = None
@@ -6,7 +9,7 @@ class AppException(Exception):
         self,
         *,
         message: str | None = None,
-        details: dict | list | str | None = None,
+        details: Dict | List | str | None = None,
     ):
         if message is not None:
             self.message = message

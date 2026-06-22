@@ -1,3 +1,5 @@
+from typing import List, Tuple
+
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -44,7 +46,7 @@ class StudentRepository(BaseRepository):
         self,
         limit: int,
         offset: int,
-    ) -> tuple[list[StudentsOrm], bool]:
+    ) -> Tuple[List[StudentsOrm], bool]:
         stmt = self._get_with_courses_stmt().offset(offset).limit(limit + 1)
         result = await self.session.execute(stmt)
         students = list(result.unique().scalars().all())

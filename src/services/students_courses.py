@@ -1,3 +1,5 @@
+from typing import Dict, List, Set
+
 from sqlalchemy import exists, func, select, update
 
 from src.mappers.students_courses import (
@@ -27,11 +29,11 @@ class StudentsCoursesService(BaseService):
 
     def _raise_if_duplicate_course_reestr_numbers(
         self,
-        reestr_numbers: list[str],
+        reestr_numbers: List[str],
         *,
         student_id: int | None = None,
     ) -> None:
-        seen_numbers: set[str] = set()
+        seen_numbers: Set[str] = set()
         for reestr_number in reestr_numbers:
             if reestr_number in seen_numbers:
                 self._raise_already_exists(
@@ -57,7 +59,7 @@ class StudentsCoursesService(BaseService):
             record_book_number=record_book_number,
         )
 
-    async def _get_or_create_course(self, course_data: dict[str, str]) -> CoursesOrm:
+    async def _get_or_create_course(self, course_data: Dict[str, str]) -> CoursesOrm:
         reestr_number = course_data["reestr_number"]
         title = course_data["title"]
 
@@ -85,7 +87,7 @@ class StudentsCoursesService(BaseService):
             select(func.pg_advisory_xact_lock(func.hashtext(lock_key)))
         )
 
-    async def _create_course(self, course_data: dict[str, str]) -> CoursesOrm:
+    async def _create_course(self, course_data: Dict[str, str]) -> CoursesOrm:
         course = map_course_payload_to_orm(course_data)
         self.repo.session.add(course)
         await self.repo.flush()
@@ -237,7 +239,7 @@ class StudentsCoursesService(BaseService):
             await self.repo.update(student_id, student_data)
         if courses_data is not None:
             existing_course_ids = {course.id for course in student.courses}
-            target_course_ids: set[int] = set()
+            target_course_ids: Set[int] = set()
             for course_data in courses_data:
                 course = await self._get_or_create_course(course_data)
                 target_course_ids.add(course.id)

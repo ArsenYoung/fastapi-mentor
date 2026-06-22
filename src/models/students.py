@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,7 +28,7 @@ class StudentsOrm(Base):
     )
 
     @property
-    def courses(self) -> list["CoursesOrm"]:
+    def courses(self) -> List["CoursesOrm"]:
         return [
             link.courses
             for link in self.course_link

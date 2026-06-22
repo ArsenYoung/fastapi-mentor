@@ -1,10 +1,12 @@
+from typing import Dict, List
+
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
 from src.schemas.authors import Author, AuthorBookUpdateRequest, AuthorCreate, AuthorsPaginatedList, AuthorUpdate
 from src.schemas.books import Book, BookCreate
 
 
-def map_author_create_to_payload(data: AuthorCreate) -> dict[str, str]:
+def map_author_create_to_payload(data: AuthorCreate) -> Dict[str, str]:
     return {
         "author_code": data.author_code,
         "first_name": data.first_name,
@@ -12,7 +14,7 @@ def map_author_create_to_payload(data: AuthorCreate) -> dict[str, str]:
     }
 
 
-def map_author_update_to_payload(data: AuthorUpdate) -> dict[str, str]:
+def map_author_update_to_payload(data: AuthorUpdate) -> Dict[str, str]:
     return data.model_dump(
         exclude_unset=True,
         exclude_none=True,
@@ -21,8 +23,8 @@ def map_author_update_to_payload(data: AuthorUpdate) -> dict[str, str]:
 
 
 def map_books_to_payloads(
-    books: list[BookCreate] | list[AuthorBookUpdateRequest],
-) -> list[dict[str, str]]:
+    books: List[BookCreate] | List[AuthorBookUpdateRequest],
+) -> List[Dict[str, str]]:
     return [
         {
             "book_code": book.book_code,
@@ -32,7 +34,7 @@ def map_books_to_payloads(
     ]
 
 
-def map_book_payload_to_orm(author_id: int, payload: dict[str, str]) -> BooksOrm:
+def map_book_payload_to_orm(author_id: int, payload: Dict[str, str]) -> BooksOrm:
     return BooksOrm(
         author_id=author_id,
         book_code=payload["book_code"],
@@ -59,7 +61,7 @@ def map_author_to_read(author: AuthorsOrm) -> Author:
 
 
 def map_authors_paginated_list(
-    authors: list[AuthorsOrm],
+    authors: List[AuthorsOrm],
     *,
     has_next: bool,
     limit: int,

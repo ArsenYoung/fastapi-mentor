@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.books import Book, BookCreate
@@ -33,7 +35,7 @@ class AuthorCreate(BaseModel):
     author_code: str = Field(min_length=1, max_length=6)
     first_name: str = Field(min_length=1, max_length=50)
     last_name: str = Field(min_length=1, max_length=50)
-    books: list[BookCreate] = Field(default_factory=list)
+    books: List[BookCreate] = Field(default_factory=list)
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE,
     )
@@ -44,7 +46,7 @@ class Author(BaseModel):
     author_code: str
     first_name: str
     last_name: str
-    books: list[Book] = Field(default_factory=list)
+    books: List[Book] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -57,13 +59,13 @@ class AuthorUpdate(BaseModel):
     author_code: str | None = None
     first_name: str | None = None
     last_name: str | None = None
-    books: list[AuthorBookUpdateRequest] | None = None
+    books: List[AuthorBookUpdateRequest] | None = None
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST,
     )
 
 class AuthorsPaginatedList(BaseModel):
-    items: list[Author]
+    items: List[Author]
     has_next: bool
     limit: int
     offset: int

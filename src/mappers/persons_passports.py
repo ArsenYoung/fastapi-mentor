@@ -1,17 +1,19 @@
+from typing import Dict, List
+
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
 from src.schemas.passports import Passport, PassportCreate, PassportUpdate
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
 
 
-def map_person_create_to_person_payload(data: PersonCreate) -> dict[str, str]:
+def map_person_create_to_person_payload(data: PersonCreate) -> Dict[str, str]:
     return {
         "first_name": data.first_name,
         "last_name": data.last_name,
     }
 
 
-def map_person_update_to_person_payload(data: PersonUpdate) -> dict[str, str]:
+def map_person_update_to_person_payload(data: PersonUpdate) -> Dict[str, str]:
     return data.model_dump(
         exclude_unset=True,
         exclude_none=True,
@@ -27,7 +29,7 @@ def map_passport_create_to_orm(data: PassportCreate, person_id: int) -> Passport
     )
 
 
-def map_passport_update_to_payload(data: PassportUpdate | None) -> dict[str, str]:
+def map_passport_update_to_payload(data: PassportUpdate | None) -> Dict[str, str]:
     if data is None:
         return {}
     return data.model_dump(
@@ -54,7 +56,7 @@ def map_person_to_read(person: PersonsOrm) -> Person:
 
 
 def map_persons_paginated_list(
-    persons: list[PersonsOrm],
+    persons: List[PersonsOrm],
     *,
     has_next: bool,
     limit: int,

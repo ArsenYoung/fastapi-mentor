@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.passports import Passport, PassportCreate, PassportUpdate
@@ -55,7 +57,7 @@ class PersonUpdate(BaseModel):
     )
 
 class PersonsPaginatedList(BaseModel):
-    items: list[Person]
+    items: List[Person]
     has_next: bool
     limit: int
     offset: int

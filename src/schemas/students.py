@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.schemas.courses import Course, CourseCreate
@@ -47,7 +49,7 @@ class StudentCreate(BaseModel):
     first_name: str = Field(min_length=1, max_length=50)
     last_name: str = Field(min_length=1, max_length=50)
     record_book_number: str = Field(min_length=1, max_length=8)
-    courses: list[CourseCreate]
+    courses: List[CourseCreate]
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
     )
@@ -58,7 +60,7 @@ class Student(BaseModel):
     first_name: str
     last_name: str
     record_book_number: str
-    courses: list[Course]
+    courses: List[Course]
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -71,13 +73,13 @@ class StudentUpdate(BaseModel):
     first_name: str | None = None
     last_name: str | None = None
     record_book_number: str | None = None
-    courses: list[StudentCourseUpdateRequest] | None = None
+    courses: List[StudentCourseUpdateRequest] | None = None
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )
 
 class StudentsPaginatedList(BaseModel):
-    items: list[Student]
+    items: List[Student]
     has_next: bool
     limit: int
     offset: int
