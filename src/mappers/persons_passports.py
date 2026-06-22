@@ -7,10 +7,9 @@ from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, Pers
 
 
 def map_person_create_to_person_payload(data: PersonCreate) -> Dict[str, str]:
-    return {
-        "first_name": data.first_name,
-        "last_name": data.last_name,
-    }
+    return data.model_dump(
+        exclude={"passport"},
+    )
 
 
 def map_person_update_to_person_payload(data: PersonUpdate) -> Dict[str, str]:

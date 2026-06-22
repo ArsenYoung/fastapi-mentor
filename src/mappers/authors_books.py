@@ -7,11 +7,9 @@ from src.schemas.books import Book, BookCreate
 
 
 def map_author_create_to_payload(data: AuthorCreate) -> Dict[str, str]:
-    return {
-        "author_code": data.author_code,
-        "first_name": data.first_name,
-        "last_name": data.last_name,
-    }
+    return data.model_dump(
+        exclude={"books"},
+    )
 
 
 def map_author_update_to_payload(data: AuthorUpdate) -> Dict[str, str]:
@@ -22,9 +20,7 @@ def map_author_update_to_payload(data: AuthorUpdate) -> Dict[str, str]:
     )
 
 
-def map_books_to_payloads(
-    books: List[BookCreate] | List[AuthorBookUpdateRequest],
-) -> List[Dict[str, str]]:
+def map_books_to_payloads(books: List[BookCreate] | List[AuthorBookUpdateRequest]) -> List[Dict[str, str]]:
     return [
         {
             "book_code": book.book_code,

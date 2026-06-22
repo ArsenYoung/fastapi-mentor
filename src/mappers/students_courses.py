@@ -13,11 +13,9 @@ from src.schemas.students import (
 
 
 def map_student_create_to_payload(data: StudentCreate) -> Dict[str, str]:
-    return {
-        "first_name": data.first_name,
-        "last_name": data.last_name,
-        "record_book_number": data.record_book_number,
-    }
+    return data.model_dump(
+        exclude={"courses"},
+    )
 
 
 def map_student_update_to_payload(data: StudentUpdate) -> Dict[str, str]:
