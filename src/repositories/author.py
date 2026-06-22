@@ -1,9 +1,8 @@
-from typing import Any, List, Mapping, Sequence, Tuple
+from typing import List, Sequence, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from src.mappers.authors_books import map_book_payload_to_orm
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
 from src.repositories.base import BaseRepository
@@ -59,13 +58,9 @@ class AuthorRepository(BaseRepository):
 
     async def create_author_with_books(
         self,
-        author_data: Mapping[str, Any],
-        books_data: Sequence[Mapping[str, str]],
+        author: AuthorsOrm,
     ) -> AuthorsOrm:
-        author = await self.create(**author_data)
-
-        for book in books_data:
-            self.session.add(map_book_payload_to_orm(author.id, book))
+        self.session.add(author)
         await self.session.flush()
         created_author = await self._get_author_with_books(author.id)
         assert created_author is not None

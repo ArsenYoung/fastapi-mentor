@@ -2,15 +2,18 @@ from typing import Sequence
 
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
-from src.schemas.passports import Passport, PassportCreate
-from src.schemas.persons import Person, PersonsPaginatedList
+from src.schemas.passports import Passport
+from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList
 
 
-def map_passport_create_to_orm(data: PassportCreate, person_id: int) -> PassportsOrm:
-    return PassportsOrm(
-        person_id=person_id,
-        number=data.number,
-        registrated_in=data.registrated_in,
+def map_person_create_to_orm(data: PersonCreate) -> PersonsOrm:
+    return PersonsOrm(
+        first_name=data.first_name,
+        last_name=data.last_name,
+        passport=PassportsOrm(
+            number=data.passport.number,
+            registrated_in=data.passport.registrated_in,
+        ),
     )
 
 

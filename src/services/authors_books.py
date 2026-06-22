@@ -1,6 +1,7 @@
 from typing import List, Mapping, Sequence, Set, Tuple
 
 from src.mappers.authors_books import (
+    map_author_payload_to_orm,
     map_author_to_read,
     map_authors_paginated_list,
     map_book_payload_to_orm,
@@ -134,8 +135,10 @@ class AuthorsBooksService(BaseService):
         self._raise_if_duplicate_book_codes([book.book_code for book in data.books])
         await self._raise_if_book_codes_exist([book.book_code for book in data.books])
         author = await self.repo.create_author_with_books(
-            author_data=data.model_dump(exclude={"books"}),
-            books_data=[book.model_dump() for book in data.books],
+            map_author_payload_to_orm(
+                data.model_dump(exclude={"books"}),
+                [book.model_dump() for book in data.books],
+            ),
         )
         self.logger.info("author_created", author_id=author.id)
 

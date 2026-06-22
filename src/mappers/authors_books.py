@@ -14,6 +14,21 @@ def map_book_payload_to_orm(author_id: int, payload: Mapping[str, str]) -> Books
     )
 
 
+def map_author_payload_to_orm(
+    author_payload: Mapping[str, str],
+    books_payload: Sequence[Mapping[str, str]],
+) -> AuthorsOrm:
+    author = AuthorsOrm(**author_payload)
+    author.books.extend(
+        BooksOrm(
+            book_code=book_payload["book_code"],
+            title=book_payload["title"],
+        )
+        for book_payload in books_payload
+    )
+    return author
+
+
 def map_book_to_read(book: BooksOrm) -> Book:
     return Book(
         id=book.id,

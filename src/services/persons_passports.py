@@ -1,5 +1,5 @@
 from src.mappers.persons_passports import (
-    map_passport_create_to_orm,
+    map_person_create_to_orm,
     map_person_to_read,
     map_persons_paginated_list,
 )
@@ -41,15 +41,13 @@ class PersonsPassportsService(BaseService):
 
     async def create_person_with_passport(self, data: PersonCreate) -> None:
         await self._raise_if_passport_number_exists(data.passport.number)
-        person_data = data.model_dump(exclude={"passport"})
-        person = await self.repo.create(**person_data)
-        passport = map_passport_create_to_orm(data.passport, person.id)
-        self.repo.session.add(passport)
-        await self.repo.flush()
+        person = await self.repo.create_person_with_passport(
+            map_person_create_to_orm(data),
+        )
         self.logger.info(
             "person_created",
             person_id=person.id,
-            passport_id=passport.id,
+            passport_id=person.passport.id,
         )
 
     async def get_person_with_passport(self, person_id: int) -> Person:
