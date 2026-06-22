@@ -1,9 +1,6 @@
 from src.mappers.persons_passports import (
     map_passport_create_to_orm,
-    map_passport_update_to_payload,
-    map_person_create_to_person_payload,
     map_person_to_read,
-    map_person_update_to_person_payload,
     map_persons_paginated_list,
 )
 from src.models.persons import PersonsOrm
@@ -43,7 +40,7 @@ class PersonsPassportsService(BaseService):
 
     async def create_person_with_passport(self, data: PersonCreate) -> None:
         await self._raise_if_passport_number_exists(data.passport.number)
-        person_data = map_person_create_to_person_payload(data)
+        person_data = data.model_dump(exclude={"passport"})
         person = await self.repo.create(**person_data)
         passport = map_passport_create_to_orm(data.passport, person.id)
         self.repo.session.add(passport)
@@ -80,7 +77,11 @@ class PersonsPassportsService(BaseService):
     async def update_person_with_passport(self, person_id: int, data: PersonUpdate) -> None:
         person = await self._get_existing_person(person_id)
 
-        person_data = map_person_update_to_person_payload(data)
+        person_data = data.model_dump(
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={"passport"},
+        )
         for field, value in person_data.items():
             setattr(person, field, value)
         if data.passport is not None:
@@ -89,7 +90,10 @@ class PersonsPassportsService(BaseService):
                     data.passport.number,
                     exclude_person_id=person_id,
                 )
-            passport_data = map_passport_update_to_payload(data.passport)
+            passport_data = data.passport.model_dump(
+                exclude_unset=True,
+                exclude_none=True,
+            )
             for field, value in passport_data.items():
                 setattr(person.passport, field, value)
         await self.repo.flush()

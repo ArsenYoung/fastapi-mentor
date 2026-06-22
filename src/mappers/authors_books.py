@@ -2,32 +2,8 @@ from typing import Dict, List
 
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
-from src.schemas.authors import Author, AuthorBookUpdateRequest, AuthorCreate, AuthorsPaginatedList, AuthorUpdate
-from src.schemas.books import Book, BookCreate
-
-
-def map_author_create_to_payload(data: AuthorCreate) -> Dict[str, str]:
-    return data.model_dump(
-        exclude={"books"},
-    )
-
-
-def map_author_update_to_payload(data: AuthorUpdate) -> Dict[str, str]:
-    return data.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
-        exclude={"books"},
-    )
-
-
-def map_books_to_payloads(books: List[BookCreate] | List[AuthorBookUpdateRequest]) -> List[Dict[str, str]]:
-    return [
-        {
-            "book_code": book.book_code,
-            "title": book.title,
-        }
-        for book in books
-    ]
+from src.schemas.authors import Author, AuthorsPaginatedList
+from src.schemas.books import Book
 
 
 def map_book_payload_to_orm(author_id: int, payload: Dict[str, str]) -> BooksOrm:

@@ -2,46 +2,11 @@ from typing import Dict, List
 
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
-from src.schemas.courses import Course, CourseCreate
+from src.schemas.courses import Course
 from src.schemas.students import (
     Student,
-    StudentCourseUpdateRequest,
-    StudentCreate,
     StudentsPaginatedList,
-    StudentUpdate,
 )
-
-
-def map_student_create_to_payload(data: StudentCreate) -> Dict[str, str]:
-    return data.model_dump(
-        exclude={"courses"},
-    )
-
-
-def map_student_update_to_payload(data: StudentUpdate) -> Dict[str, str]:
-    return data.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
-        exclude={"courses"},
-    )
-
-
-def map_course_to_payload(
-    data: CourseCreate | StudentCourseUpdateRequest,
-) -> Dict[str, str]:
-    return {
-        "reestr_number": data.reestr_number,
-        "title": data.title,
-    }
-
-
-def map_courses_to_payloads(
-    courses: List[CourseCreate] | List[StudentCourseUpdateRequest],
-) -> List[Dict[str, str]]:
-    return [
-        map_course_to_payload(course)
-        for course in courses
-    ]
 
 
 def map_course_payload_to_orm(payload: Dict[str, str]) -> CoursesOrm:

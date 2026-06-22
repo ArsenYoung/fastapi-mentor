@@ -3,11 +3,8 @@ from typing import Dict, List, Set
 from sqlalchemy import exists, func, select, update
 
 from src.mappers.students_courses import (
-    map_courses_to_payloads,
     map_course_payload_to_orm,
-    map_student_create_to_payload,
     map_student_to_read,
-    map_student_update_to_payload,
     map_students_paginated_list,
 )
 from src.models.courses import CoursesOrm
@@ -161,12 +158,12 @@ class StudentsCoursesService(BaseService):
         )
 
     async def create_student_with_courses(self, data: StudentCreate) -> None:
-        courses_data = map_courses_to_payloads(data.courses)
+        courses_data = [course.model_dump() for course in data.courses]
         self._raise_if_duplicate_course_reestr_numbers(
             [course["reestr_number"] for course in courses_data],
         )
         await self._raise_if_record_book_number_exists(data.record_book_number)
-        student = await self.repo.create(**map_student_create_to_payload(data))
+        student = await self.repo.create(**data.model_dump(exclude={"courses"}))
         for course_data in courses_data:
             course = await self._get_or_create_course(course_data)
             await self._create_course_link(student.id, course.id)
@@ -220,7 +217,7 @@ class StudentsCoursesService(BaseService):
                 student_id=student_id,
             )
         courses_data = (
-            map_courses_to_payloads(data.courses)
+            [course.model_dump() for course in data.courses]
             if data.courses is not None
             else None
         )
@@ -234,7 +231,11 @@ class StudentsCoursesService(BaseService):
                 data.record_book_number,
                 exclude_student_id=student_id,
             )
-        student_data = map_student_update_to_payload(data)
+        student_data = data.model_dump(
+            exclude_unset=True,
+            exclude_none=True,
+            exclude={"courses"},
+        )
         if student_data:
             await self.repo.update(student_id, student_data)
         if courses_data is not None:
