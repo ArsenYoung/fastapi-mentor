@@ -62,9 +62,7 @@ class AuthorRepository(BaseRepository):
     ) -> AuthorsOrm:
         self.session.add(author)
         await self.session.flush()
-        created_author = await self._get_author_with_books(author.id)
-        assert created_author is not None
-        return created_author
+        return author
 
     async def get_author_with_books(self, author_id: int) -> AuthorsOrm | None:
         return await self._get_author_with_books(author_id)

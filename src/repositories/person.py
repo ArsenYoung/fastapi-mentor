@@ -48,9 +48,7 @@ class PersonRepository(BaseRepository):
     async def create_person_with_passport(self, person: PersonsOrm) -> PersonsOrm:
         self.session.add(person)
         await self.session.flush()
-        created_person = await self._get_person_with_passport(person.id)
-        assert created_person is not None
-        return created_person
+        return person
 
     async def get_persons_with_passports_paginated_list(
         self,
