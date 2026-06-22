@@ -14,17 +14,12 @@ from src.services.students_courses import StudentsCoursesService
 router = APIRouter(prefix="/students", tags=["Students and Courses M-M"])
 
 
-@router.post(
-    "",
-    summary="Create a student and their courses",
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("", summary="Create a student and their courses", response_model=Student, status_code=status.HTTP_201_CREATED)
 async def create_student_with_courses(
     data: StudentCreate,
     service: StudentsCoursesService = Depends(get_students_courses_service),
-) -> CommonResponse:
-    await service.create_student_with_courses(data)
-    return CommonResponse
+) -> Student:
+    return await service.create_student_with_courses(data)
 
 
 @router.get(

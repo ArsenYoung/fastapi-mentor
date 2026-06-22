@@ -162,7 +162,7 @@ class StudentsCoursesService(BaseService):
             )
         )
 
-    async def create_student_with_courses(self, data: StudentCreate) -> None:
+    async def create_student_with_courses(self, data: StudentCreate) -> Student:
         courses_data = [course.model_dump() for course in data.courses]
         self._raise_if_duplicate_course_reestr_numbers(
             [course["reestr_number"] for course in courses_data],
@@ -173,6 +173,14 @@ class StudentsCoursesService(BaseService):
             course = await self._get_or_create_course(course_data)
             await self._create_course_link(student.id, course.id)
         self.logger.info("student_created", student_id=student.id)
+        created_student = await self.repo.get_student_with_courses(student.id)
+        if created_student is None:
+            self._raise_not_found(
+                message="Student not found",
+                details=StudentErrorDetails(student_id=student.id),
+                student_id=student.id,
+            )
+        return map_student_to_read(created_student)
 
     async def get_student_with_courses(self, student_id: int) -> Student:
         student = await self.repo.get_student_with_courses(student_id)

@@ -130,7 +130,7 @@ class AuthorsBooksService(BaseService):
             book.is_deleted = True
         await self.repo.flush()
 
-    async def create_author_with_books(self, data: AuthorCreate) -> None:
+    async def create_author_with_books(self, data: AuthorCreate) -> Author:
         await self._raise_if_author_code_exists(data.author_code)
         self._raise_if_duplicate_book_codes([book.book_code for book in data.books])
         await self._raise_if_book_codes_exist([book.book_code for book in data.books])
@@ -141,6 +141,7 @@ class AuthorsBooksService(BaseService):
             ),
         )
         self.logger.info("author_created", author_id=author.id)
+        return map_author_to_read(author)
 
     async def get_author_with_books(self, author_id: int) -> Author:
         author = await self.repo.get_author_with_books(author_id)

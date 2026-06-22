@@ -9,13 +9,12 @@ from src.services.authors_books import AuthorsBooksService
 router = APIRouter(prefix="/authors", tags=["Authors and Books 1-M"])
 
 
-@router.post("", summary="Create an author and their books", status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Author, summary="Create an author and their books", status_code=status.HTTP_201_CREATED)
 async def create_author_with_books(
     data: AuthorCreate,
     service: AuthorsBooksService = Depends(get_authors_books_service)
-) -> CommonResponse:
-    await service.create_author_with_books(data)
-    return CommonResponse
+) -> Author:
+    return await service.create_author_with_books(data)
 
 @router.get("/{author_id}", response_model=Author, summary="Get an author and their books", status_code=status.HTTP_200_OK)
 async def get_author_with_books(

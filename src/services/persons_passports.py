@@ -39,7 +39,7 @@ class PersonsPassportsService(BaseService):
             passport_number=passport_number,
         )
 
-    async def create_person_with_passport(self, data: PersonCreate) -> None:
+    async def create_person_with_passport(self, data: PersonCreate) -> Person:
         await self._raise_if_passport_number_exists(data.passport.number)
         person = await self.repo.create_person_with_passport(
             map_person_create_to_orm(data),
@@ -49,6 +49,7 @@ class PersonsPassportsService(BaseService):
             person_id=person.id,
             passport_id=person.passport.id,
         )
+        return map_person_to_read(person)
 
     async def get_person_with_passport(self, person_id: int) -> Person:
         person = await self._get_existing_person(person_id)

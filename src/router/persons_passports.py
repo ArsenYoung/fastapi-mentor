@@ -9,13 +9,12 @@ from src.services.persons_passports import PersonsPassportsService
 router = APIRouter(prefix="/persons", tags=["Persons and Passports 1-1"])
 
 
-@router.post("", summary="Create a person with passport data", status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=Person, summary="Create a person with passport data", status_code=status.HTTP_201_CREATED)
 async def create_person_with_passport(
     data: PersonCreate,
     service: PersonsPassportsService = Depends(get_persons_passports_service)
-) -> CommonResponse:
-    await service.create_person_with_passport(data)
-    return CommonResponse
+) -> Person:
+    return await service.create_person_with_passport(data)
 
 @router.get("/{person_id}", response_model=Person, summary="Get a person and their passport data", status_code=status.HTTP_200_OK)
 async def get_person_with_passport(
