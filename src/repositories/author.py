@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Any, List, Mapping, Sequence, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -39,7 +39,7 @@ class AuthorRepository(BaseRepository):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_authors_by_book_codes(self, book_codes: List[str]) -> List[AuthorsOrm]:
+    async def get_authors_by_book_codes(self, book_codes: Sequence[str]) -> List[AuthorsOrm]:
         if not book_codes:
             return []
         stmt = (
@@ -59,8 +59,8 @@ class AuthorRepository(BaseRepository):
 
     async def create_author_with_books(
         self,
-        author_data: Dict[str, str],
-        books_data: List[Dict[str, str]],
+        author_data: Mapping[str, Any],
+        books_data: Sequence[Mapping[str, str]],
     ) -> AuthorsOrm:
         author = await self.create(**author_data)
 
@@ -78,7 +78,7 @@ class AuthorRepository(BaseRepository):
         self,
         limit: int,
         offset: int,
-    ) -> Tuple[List[AuthorsOrm], bool]:
+    ) -> Tuple[Sequence[AuthorsOrm], bool]:
         stmt = self._get_with_books_stmt().offset(offset).limit(limit + 1)
         result = await self.session.execute(stmt)
         authors = list(result.unique().scalars().all())

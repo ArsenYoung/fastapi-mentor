@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Mapping, Sequence
 
 
 class AppException(Exception):
@@ -9,7 +9,7 @@ class AppException(Exception):
         self,
         *,
         message: str | None = None,
-        details: Dict | List | str | None = None,
+        details: Mapping[str, Any] | Sequence[Any] | str | None = None,
     ):
         if message is not None:
             self.message = message

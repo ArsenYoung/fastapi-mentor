@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Mapping, Sequence
 
 import structlog
 
@@ -12,7 +12,7 @@ class BaseService():
     def _raise_not_found(
             self,
             message: str | None = None,
-            details: Dict | List | str | None = None,
+            details: Mapping[str, Any] | Sequence[Any] | str | None = None,
             **context
     ) -> None:
         self.logger.warning(
@@ -27,7 +27,7 @@ class BaseService():
     def _raise_already_exists(
             self,
             message: str | None = None,
-            details: Dict | List | str | None = None,
+            details: Mapping[str, Any] | Sequence[Any] | str | None = None,
             **context) -> None:
         self.logger.warning(
             message or AlreadyExistsException.message,

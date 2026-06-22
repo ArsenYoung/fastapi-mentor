@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Sequence, Tuple
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -49,7 +49,7 @@ class PersonRepository(BaseRepository):
         self,
         limit: int,
         offset: int,
-    ) -> Tuple[List[PersonsOrm], bool]:
+    ) -> Tuple[Sequence[PersonsOrm], bool]:
         stmt = self._get_with_passport_stmt().offset(offset).limit(limit + 1)
         result = await self.session.execute(stmt)
         persons = list(result.unique().scalars().all())

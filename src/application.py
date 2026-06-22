@@ -1,6 +1,6 @@
 from contextlib import AsyncExitStack
 import time
-from typing import Dict, List
+from typing import Any, Mapping, Sequence
 
 import structlog
 
@@ -28,7 +28,7 @@ from src.schemas.errors import ErrorPayload, ErrorResponse
 def get_error_response(
     status_code: int,
     message: str,
-    details: Dict | List | str | None = None,
+    details: Mapping[str, Any] | Sequence[Any] | str | None = None,
 ) -> JSONResponse:
     error_response = ErrorResponse(
         error=ErrorPayload(

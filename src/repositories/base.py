@@ -1,4 +1,4 @@
-from typing import Any, Dict, Generic, TypeVar
+from typing import Any, Generic, Mapping, TypeVar
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +30,7 @@ class BaseRepository(Generic[ModelT]):
     async def flush(self) -> None:
         await self.session.flush()
 
-    async def update(self, entity_id: int, values: Dict[str, Any]) -> None:
+    async def update(self, entity_id: int, values: Mapping[str, Any]) -> None:
         await self.session.execute(
             update(self.model)
             .filter_by(id=entity_id)

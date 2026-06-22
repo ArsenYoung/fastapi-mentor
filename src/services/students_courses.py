@@ -1,4 +1,4 @@
-from typing import Dict, List, Set
+from typing import Mapping, Sequence, Set
 
 from sqlalchemy import exists, func, select, update
 
@@ -26,7 +26,7 @@ class StudentsCoursesService(BaseService):
 
     def _raise_if_duplicate_course_reestr_numbers(
         self,
-        reestr_numbers: List[str],
+        reestr_numbers: Sequence[str],
         *,
         student_id: int | None = None,
     ) -> None:
@@ -56,7 +56,7 @@ class StudentsCoursesService(BaseService):
             record_book_number=record_book_number,
         )
 
-    async def _get_or_create_course(self, course_data: Dict[str, str]) -> CoursesOrm:
+    async def _get_or_create_course(self, course_data: Mapping[str, str]) -> CoursesOrm:
         reestr_number = course_data["reestr_number"]
         title = course_data["title"]
 
@@ -84,7 +84,7 @@ class StudentsCoursesService(BaseService):
             select(func.pg_advisory_xact_lock(func.hashtext(lock_key)))
         )
 
-    async def _create_course(self, course_data: Dict[str, str]) -> CoursesOrm:
+    async def _create_course(self, course_data: Mapping[str, str]) -> CoursesOrm:
         course = map_course_payload_to_orm(course_data)
         self.repo.session.add(course)
         await self.repo.flush()

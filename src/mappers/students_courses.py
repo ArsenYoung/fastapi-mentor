@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Mapping, Sequence
 
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
@@ -9,7 +9,7 @@ from src.schemas.students import (
 )
 
 
-def map_course_payload_to_orm(payload: Dict[str, str]) -> CoursesOrm:
+def map_course_payload_to_orm(payload: Mapping[str, str]) -> CoursesOrm:
     return CoursesOrm(
         reestr_number=payload["reestr_number"],
         title=payload["title"],
@@ -35,7 +35,7 @@ def map_student_to_read(student: StudentsOrm) -> Student:
 
 
 def map_students_paginated_list(
-    students: List[StudentsOrm],
+    students: Sequence[StudentsOrm],
     *,
     has_next: bool,
     limit: int,

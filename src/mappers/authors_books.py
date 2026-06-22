@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Mapping, Sequence
 
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
@@ -6,7 +6,7 @@ from src.schemas.authors import Author, AuthorsPaginatedList
 from src.schemas.books import Book
 
 
-def map_book_payload_to_orm(author_id: int, payload: Dict[str, str]) -> BooksOrm:
+def map_book_payload_to_orm(author_id: int, payload: Mapping[str, str]) -> BooksOrm:
     return BooksOrm(
         author_id=author_id,
         book_code=payload["book_code"],
@@ -33,7 +33,7 @@ def map_author_to_read(author: AuthorsOrm) -> Author:
 
 
 def map_authors_paginated_list(
-    authors: List[AuthorsOrm],
+    authors: Sequence[AuthorsOrm],
     *,
     has_next: bool,
     limit: int,

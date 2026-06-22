@@ -1,4 +1,4 @@
-from typing import List
+from typing import Sequence
 
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
@@ -32,7 +32,7 @@ def map_person_to_read(person: PersonsOrm) -> Person:
 
 
 def map_persons_paginated_list(
-    persons: List[PersonsOrm],
+    persons: Sequence[PersonsOrm],
     *,
     has_next: bool,
     limit: int,

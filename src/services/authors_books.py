@@ -1,4 +1,4 @@
-from typing import Dict, List, Set, Tuple
+from typing import List, Mapping, Sequence, Set, Tuple
 
 from src.mappers.authors_books import (
     map_author_to_read,
@@ -45,7 +45,7 @@ class AuthorsBooksService(BaseService):
             )
         return author
 
-    def _raise_if_duplicate_book_codes(self, book_codes: List[str], *, author_id: int | None = None) -> None:
+    def _raise_if_duplicate_book_codes(self, book_codes: Sequence[str], *, author_id: int | None = None) -> None:
         seen_codes: Set[str] = set()
         for book_code in book_codes:
             if book_code in seen_codes:
@@ -59,7 +59,7 @@ class AuthorsBooksService(BaseService):
 
     async def _raise_if_book_codes_exist(
         self,
-        book_codes: List[str],
+        book_codes: Sequence[str],
         *,
         exclude_author_id: int | None = None,
         author_id: int | None = None,
@@ -86,8 +86,8 @@ class AuthorsBooksService(BaseService):
     def _get_author_book_changes(
         self,
         author: AuthorsOrm,
-        books_data: List[Dict[str, str]],
-    ) -> Tuple[List[Dict[str, str]], List[Tuple[BooksOrm, str]], List[BooksOrm]]:
+        books_data: Sequence[Mapping[str, str]],
+    ) -> Tuple[List[Mapping[str, str]], List[Tuple[BooksOrm, str]], List[BooksOrm]]:
         existing_books_by_code = {
             book.book_code: book
             for book in author.books
@@ -113,9 +113,9 @@ class AuthorsBooksService(BaseService):
     async def _apply_author_book_changes(
         self,
         author: AuthorsOrm,
-        books_to_create: List[Dict[str, str]],
-        books_to_update: List[Tuple[BooksOrm, str]],
-        books_to_delete: List[BooksOrm],
+        books_to_create: Sequence[Mapping[str, str]],
+        books_to_update: Sequence[Tuple[BooksOrm, str]],
+        books_to_delete: Sequence[BooksOrm],
     ) -> None:
         author.books.extend(
             map_book_payload_to_orm(author.id, book_data)
