@@ -1,4 +1,4 @@
-from typing import Any, Mapping, Sequence
+from src.schemas.errors import ErrorDetailsType
 
 
 class AppException(Exception):
@@ -9,7 +9,7 @@ class AppException(Exception):
         self,
         *,
         message: str | None = None,
-        details: Mapping[str, Any] | Sequence[Any] | str | None = None,
+        details: ErrorDetailsType = None,
     ):
         if message is not None:
             self.message = message

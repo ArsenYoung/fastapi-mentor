@@ -14,6 +14,7 @@ from src.schemas.authors import (
     AuthorsPaginatedList,
     AuthorUpdate,
 )
+from src.schemas.errors import AuthorErrorDetails, BookErrorDetails
 from src.services.base import BaseService
 
 
@@ -32,7 +33,7 @@ class AuthorsBooksService(BaseService):
             return
         self._raise_already_exists(
             message="An author with this code already exists",
-            details={"author_code": author_code},
+            details=AuthorErrorDetails(author_code=author_code),
             author_code=author_code,
         )
 
@@ -40,7 +41,7 @@ class AuthorsBooksService(BaseService):
         if author is None:
             self._raise_not_found(
                 message="Author not found",
-                details={"author_id": author_id},
+                details=AuthorErrorDetails(author_id=author_id),
                 author_id=author_id,
             )
         return author
@@ -51,7 +52,7 @@ class AuthorsBooksService(BaseService):
             if book_code in seen_codes:
                 self._raise_already_exists(
                     message="A book with this code already exists",
-                    details={"book_code": book_code},
+                    details=BookErrorDetails(book_code=book_code),
                     author_id=author_id,
                     book_code=book_code,
                 )
@@ -78,7 +79,7 @@ class AuthorsBooksService(BaseService):
                     continue
                 self._raise_already_exists(
                     message="A book with this code already exists",
-                    details={"book_code": book.book_code},
+                    details=BookErrorDetails(book_code=book.book_code),
                     author_id=author_id,
                     book_code=book.book_code,
                 )

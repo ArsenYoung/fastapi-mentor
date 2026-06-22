@@ -1,9 +1,8 @@
-from typing import Any, Mapping, Sequence
-
 import structlog
 
 from src.exceptions.already_exists_exception import AlreadyExistsException
 from src.exceptions.object_not_found_exception import ObjectNotFoundException
+from src.schemas.errors import ErrorDetailsType
 
 
 class BaseService():
@@ -12,7 +11,7 @@ class BaseService():
     def _raise_not_found(
             self,
             message: str | None = None,
-            details: Mapping[str, Any] | Sequence[Any] | str | None = None,
+            details: ErrorDetailsType = None,
             **context
     ) -> None:
         self.logger.warning(
@@ -27,7 +26,7 @@ class BaseService():
     def _raise_already_exists(
             self,
             message: str | None = None,
-            details: Mapping[str, Any] | Sequence[Any] | str | None = None,
+            details: ErrorDetailsType = None,
             **context) -> None:
         self.logger.warning(
             message or AlreadyExistsException.message,

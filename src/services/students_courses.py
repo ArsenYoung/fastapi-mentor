@@ -17,6 +17,7 @@ from src.schemas.students import (
     StudentUpdate,
     StudentsPaginatedList,
 )
+from src.schemas.errors import CourseErrorDetails, StudentErrorDetails
 from src.services.base import BaseService
 
 
@@ -35,7 +36,9 @@ class StudentsCoursesService(BaseService):
             if reestr_number in seen_numbers:
                 self._raise_already_exists(
                     message="A course with this reestr number already exists",
-                    details={"reestr_number": reestr_number},
+                    details=CourseErrorDetails(
+                        reestr_number=reestr_number,
+                    ),
                     student_id=student_id,
                     reestr_number=reestr_number,
                 )
@@ -52,7 +55,9 @@ class StudentsCoursesService(BaseService):
             return
         self._raise_already_exists(
             message="A student with this record book number already exists",
-            details={"record_book_number": record_book_number},
+            details=StudentErrorDetails(
+                record_book_number=record_book_number,
+            ),
             record_book_number=record_book_number,
         )
 
@@ -174,7 +179,7 @@ class StudentsCoursesService(BaseService):
         if student is None:
             self._raise_not_found(
                 message="Student not found",
-                details={"student_id": student_id},
+                details=StudentErrorDetails(student_id=student_id),
                 student_id=student_id,
             )
         return map_student_to_read(student)
@@ -197,7 +202,7 @@ class StudentsCoursesService(BaseService):
         if student is None:
             self._raise_not_found(
                 message="Student not found",
-                details={"student_id": student_id},
+                details=StudentErrorDetails(student_id=student_id),
                 student_id=student_id,
             )
         for course in list(student.courses):
@@ -213,7 +218,7 @@ class StudentsCoursesService(BaseService):
         if student is None:
             self._raise_not_found(
                 message="Student not found",
-                details={"student_id": student_id},
+                details=StudentErrorDetails(student_id=student_id),
                 student_id=student_id,
             )
         courses_data = (

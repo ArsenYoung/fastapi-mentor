@@ -1,6 +1,5 @@
 from contextlib import AsyncExitStack
 import time
-from typing import Any, Mapping, Sequence
 
 import structlog
 
@@ -22,13 +21,13 @@ from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
 from src.router.persons_passports import router as persons_passports_router
 from src.router.students_courses import router as students_courses_router
-from src.schemas.errors import ErrorPayload, ErrorResponse
+from src.schemas.errors import ErrorDetailsType, ErrorPayload, ErrorResponse
 
 
 def get_error_response(
     status_code: int,
     message: str,
-    details: Mapping[str, Any] | Sequence[Any] | str | None = None,
+    details: ErrorDetailsType = None,
 ) -> JSONResponse:
     error_response = ErrorResponse(
         error=ErrorPayload(
@@ -38,7 +37,7 @@ def get_error_response(
     )
     return JSONResponse(
         status_code=status_code,
-        content=error_response.model_dump(),
+        content=error_response.model_dump(exclude_none=True),
     )
 
 
