@@ -29,7 +29,7 @@ class AuthorsBooksService(BaseService):
         *,
         exclude_author_id: int | None = None,
     ) -> None:
-        author = await self.repo.get_author_by_code(author_code)
+        author = await self.repo.get(author_code=author_code)
         if author is None or author.id == exclude_author_id:
             return
         self._raise_already_exists(
@@ -134,7 +134,7 @@ class AuthorsBooksService(BaseService):
         await self._raise_if_author_code_exists(data.author_code)
         self._raise_if_duplicate_book_codes([book.book_code for book in data.books])
         await self._raise_if_book_codes_exist([book.book_code for book in data.books])
-        author = await self.repo.create_author_with_books(
+        author = await self.repo.create(
             map_author_payload_to_orm(
                 data.model_dump(exclude={"books"}),
                 [book.model_dump() for book in data.books],
@@ -144,12 +144,12 @@ class AuthorsBooksService(BaseService):
         return map_author_to_read(author)
 
     async def get_author_with_books(self, author_id: int) -> Author:
-        author = await self.repo.get_author_with_books(author_id)
+        author = await self.repo.get(author_id)
         author = self._raise_if_author_not_found(author, author_id)
         return map_author_to_read(author)
 
     async def get_authors_with_books_paginated_list(self, limit: int, offset: int) -> AuthorsPaginatedList:
-        authors, has_next = await self.repo.get_authors_with_books_paginated_list(
+        authors, has_next = await self.repo.get_paginated_list(
             limit,
             offset,
         )
@@ -161,7 +161,7 @@ class AuthorsBooksService(BaseService):
         )
 
     async def delete_author_with_books(self, author_id: int) -> None:
-        author = await self.repo.get_author_with_books(author_id)
+        author = await self.repo.get(author_id)
         author = self._raise_if_author_not_found(author, author_id)
         for book in author.books:
             book.is_deleted = True
@@ -170,7 +170,7 @@ class AuthorsBooksService(BaseService):
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update_author_with_books(self, author_id: int, data: AuthorUpdate) -> None:
-        author = await self.repo.get_author_with_books(author_id)
+        author = await self.repo.get(author_id)
         author = self._raise_if_author_not_found(author, author_id)
         author_data = data.model_dump(
             exclude_unset=True,

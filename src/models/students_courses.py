@@ -22,4 +22,9 @@ class StudentsCoursesOrm(AssociationBase):
     )
 
     students = relationship("StudentsOrm", back_populates="course_link")
-    courses = relationship("CoursesOrm", back_populates="student_link")
+    courses = relationship(
+        "CoursesOrm",
+        back_populates="student_link",
+        primaryjoin="and_(StudentsCoursesOrm.course_id == CoursesOrm.id, CoursesOrm.is_deleted.is_(False))",
+        lazy="joined",
+    )

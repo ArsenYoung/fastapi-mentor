@@ -28,4 +28,6 @@ class CoursesOrm(Base):
         "StudentsCoursesOrm",
         back_populates="courses",
         cascade="all, delete-orphan",
+        primaryjoin="and_(CoursesOrm.id == StudentsCoursesOrm.course_id, StudentsCoursesOrm.is_deleted.is_(False))",
+        lazy="selectin",
     )

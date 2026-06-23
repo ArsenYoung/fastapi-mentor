@@ -15,7 +15,7 @@ class PersonsPassportsService(BaseService):
         self.repo = repo
 
     async def _get_existing_person(self, person_id: int) -> PersonsOrm:
-        person = await self.repo.get_person_with_passport(person_id)
+        person = await self.repo.get(person_id)
         if person is None:
             self._raise_not_found(
                 message="Person not found",
@@ -41,7 +41,7 @@ class PersonsPassportsService(BaseService):
 
     async def create_person_with_passport(self, data: PersonCreate) -> Person:
         await self._raise_if_passport_number_exists(data.passport.number)
-        person = await self.repo.create_person_with_passport(
+        person = await self.repo.create(
             map_person_create_to_orm(data),
         )
         self.logger.info(
@@ -56,7 +56,7 @@ class PersonsPassportsService(BaseService):
         return map_person_to_read(person)
 
     async def get_persons_with_passports_paginated_list(self, limit: int, offset: int) -> PersonsPaginatedList:
-        persons, has_next = await self.repo.get_persons_with_passports_paginated_list(limit, offset)
+        persons, has_next = await self.repo.get_paginated_list(limit, offset)
         return map_persons_paginated_list(
             persons,
             has_next=has_next,

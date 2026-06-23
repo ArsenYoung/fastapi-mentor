@@ -14,4 +14,6 @@ class PersonsOrm(Base):
         back_populates="person",
         cascade="all, delete-orphan",
         single_parent=True,
+        primaryjoin="and_(PersonsOrm.id == PassportsOrm.person_id, PassportsOrm.is_deleted.is_(False))",
+        lazy="joined",
     )

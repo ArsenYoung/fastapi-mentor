@@ -50,7 +50,7 @@ class StudentsCoursesService(BaseService):
         *,
         exclude_student_id: int | None = None,
     ) -> None:
-        student = await self.repo.get_student_by_record_book_number(record_book_number)
+        student = await self.repo.get(record_book_number=record_book_number)
         if student is None or student.id == exclude_student_id:
             return
         self._raise_already_exists(
@@ -173,7 +173,7 @@ class StudentsCoursesService(BaseService):
             course = await self._get_or_create_course(course_data)
             await self._create_course_link(student.id, course.id)
         self.logger.info("student_created", student_id=student.id)
-        created_student = await self.repo.get_student_with_courses(student.id)
+        created_student = await self.repo.get(student.id)
         if created_student is None:
             self._raise_not_found(
                 message="Student not found",
@@ -183,7 +183,7 @@ class StudentsCoursesService(BaseService):
         return map_student_to_read(created_student)
 
     async def get_student_with_courses(self, student_id: int) -> Student:
-        student = await self.repo.get_student_with_courses(student_id)
+        student = await self.repo.get(student_id)
         if student is None:
             self._raise_not_found(
                 message="Student not found",
@@ -195,7 +195,7 @@ class StudentsCoursesService(BaseService):
     async def get_students_with_courses_paginated_list(
         self, limit: int, offset: int
     ) -> StudentsPaginatedList:
-        students, has_next = await self.repo.get_students_with_courses_paginated_list(
+        students, has_next = await self.repo.get_paginated_list(
             limit, offset
         )
         return map_students_paginated_list(
@@ -206,7 +206,7 @@ class StudentsCoursesService(BaseService):
         )
 
     async def delete_student_with_courses(self, student_id: int) -> None:
-        student = await self.repo.get_student_with_courses(student_id)
+        student = await self.repo.get(student_id)
         if student is None:
             self._raise_not_found(
                 message="Student not found",
@@ -222,7 +222,7 @@ class StudentsCoursesService(BaseService):
     async def update_student_with_courses(
         self, student_id: int, data: StudentUpdate
     ) -> None:
-        student = await self.repo.get_student_with_courses(student_id)
+        student = await self.repo.get(student_id)
         if student is None:
             self._raise_not_found(
                 message="Student not found",

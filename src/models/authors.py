@@ -31,4 +31,6 @@ class AuthorsOrm(Base):
         "BooksOrm",
         back_populates="author",
         cascade="all, delete-orphan",
+        primaryjoin="and_(AuthorsOrm.id == BooksOrm.author_id, BooksOrm.is_deleted.is_(False))",
+        lazy="selectin",
     )

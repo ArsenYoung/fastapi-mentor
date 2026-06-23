@@ -25,6 +25,8 @@ class StudentsOrm(Base):
         "StudentsCoursesOrm",
         back_populates="students",
         cascade="all, delete-orphan",
+        primaryjoin="and_(StudentsOrm.id == StudentsCoursesOrm.student_id, StudentsCoursesOrm.is_deleted.is_(False))",
+        lazy="selectin",
     )
 
     @property
