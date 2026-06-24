@@ -14,14 +14,14 @@ async def create_author_with_books(
     data: AuthorCreate,
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ) -> Author:
-    return await service.create_author_with_books(data)
+    return await service.create(data)
 
 @router.get("/{author_id}", response_model=Author, summary="Get an author and their books", status_code=status.HTTP_200_OK)
 async def get_author_with_books(
     author_id: int,
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ) -> Author:
-    return await service.get_author_with_books(author_id)
+    return await service.get(author_id)
 
 @router.get("", response_model=AuthorsPaginatedList, summary="Get all authors and their books", status_code=status.HTTP_200_OK)
 async def get_authors_with_books_paginated_list(
@@ -29,14 +29,14 @@ async def get_authors_with_books_paginated_list(
     offset: int = Query(0, ge=0),
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ):
-    return await service.get_authors_with_books_paginated_list(limit, offset)
+    return await service.get_paginated_list(limit, offset)
 
 @router.delete("/{author_id}", summary="Delete an author and their books", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_author_with_books(
     author_id: int,
     service: AuthorsBooksService = Depends(get_authors_books_service)
 ) -> None:
-    await service.delete_author_with_books(author_id)
+    await service.delete(author_id)
 
 @router.patch("/{author_id}", summary="Update author data", status_code=status.HTTP_200_OK)
 async def update_author_with_books(
@@ -44,5 +44,5 @@ async def update_author_with_books(
     data: AuthorUpdate,
     service: AuthorsBooksService = Depends(get_authors_books_service),
 ) -> CommonResponse:
-    await service.update_author_with_books(author_id, data)
+    await service.update(author_id, data)
     return CommonResponse

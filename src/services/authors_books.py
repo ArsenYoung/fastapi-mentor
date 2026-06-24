@@ -21,7 +21,7 @@ class AuthorsBooksService(BaseService):
     def __init__(self, repo: AuthorRepository):
         self.repo = repo
 
-    async def create_author_with_books(self, data: AuthorCreate) -> Author:
+    async def create(self, data: AuthorCreate) -> Author:
         existing_author = await self.repo.get(author_code=data.author_code)
         if existing_author is not None:
             self._raise_already_exists(
@@ -62,7 +62,7 @@ class AuthorsBooksService(BaseService):
         self.logger.info("author_created", author_id=author.id)
         return map_author_to_read(author)
 
-    async def get_author_with_books(self, author_id: int) -> Author:
+    async def get(self, author_id: int) -> Author:
         author = await self.repo.get(author_id)
         if author is None:
             self._raise_not_found(
@@ -72,7 +72,7 @@ class AuthorsBooksService(BaseService):
             )
         return map_author_to_read(author)
 
-    async def get_authors_with_books_paginated_list(
+    async def get_paginated_list(
         self, limit: int, offset: int
     ) -> AuthorsPaginatedList:
         authors, has_next = await self.repo.get_paginated_list(
@@ -86,7 +86,7 @@ class AuthorsBooksService(BaseService):
             offset=offset,
         )
 
-    async def delete_author_with_books(self, author_id: int) -> None:
+    async def delete(self, author_id: int) -> None:
         author = await self.repo.get(author_id)
         if author is None:
             self._raise_not_found(
@@ -99,9 +99,7 @@ class AuthorsBooksService(BaseService):
         await self.repo.delete(author.id)
         self.logger.info("author_deleted", author_id=author.id)
 
-    async def update_author_with_books(
-        self, author_id: int, data: AuthorUpdate
-    ) -> None:
+    async def update(self, author_id: int, data: AuthorUpdate) -> None:
         author = await self.repo.get(author_id)
         if author is None:
             self._raise_not_found(
