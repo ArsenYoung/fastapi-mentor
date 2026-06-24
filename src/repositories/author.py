@@ -1,7 +1,6 @@
 from typing import List, Sequence
 
 from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
@@ -11,20 +10,12 @@ from src.repositories.base import BaseRepository
 class AuthorRepository(BaseRepository[AuthorsOrm]):
     model = AuthorsOrm
 
-    async def get_authors_by_book_codes(
-        self, book_codes: Sequence[str]
-    ) -> List[AuthorsOrm]:
+    async def get_books_by_codes(self, book_codes: Sequence[str]) -> List[BooksOrm]:
         if not book_codes:
             return []
-        stmt = (
-            select(AuthorsOrm)
-            .join(AuthorsOrm.books)
-            .where(
-                BooksOrm.book_code.in_(book_codes),
-            )
-            .options(joinedload(AuthorsOrm.books))
-            .execution_options(populate_existing=True)
-            .order_by(AuthorsOrm.id)
+        stmt = select(BooksOrm).where(
+            BooksOrm.is_deleted.is_(False),
+            BooksOrm.book_code.in_(book_codes),
         )
         result = await self.session.execute(stmt)
-        return list(result.unique().scalars().all())
+        return list(result.scalars().all())

@@ -49,9 +49,15 @@ class BaseRepository(Generic[ModelT]):
     async def flush(self) -> None:
         await self.session.flush()
 
-    async def update(self, entity_id: int, values: Mapping[str, Any]) -> None:
+    async def update(
+        self,
+        entity_id: int,
+        values: Mapping[str, Any],
+        model: type[BaseServiceModel] | None = None,
+    ) -> None:
+        target_model = model or self.model
         await self.session.execute(
-            update(self.model)
+            update(target_model)
             .filter_by(id=entity_id)
             .values(
                 **values,
@@ -59,9 +65,14 @@ class BaseRepository(Generic[ModelT]):
             )
         )
 
-    async def delete(self, entity_id: int) -> None:
+    async def delete(
+        self,
+        entity_id: int,
+        model: type[BaseServiceModel] | None = None,
+    ) -> None:
+        target_model = model or self.model
         await self.session.execute(
-            update(self.model)
+            update(target_model)
             .filter_by(id=entity_id)
             .values(
                 is_deleted=True,
