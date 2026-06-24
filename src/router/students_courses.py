@@ -19,7 +19,7 @@ async def create_student_with_courses(
     data: StudentCreate,
     service: StudentsCoursesService = Depends(get_students_courses_service),
 ) -> Student:
-    return await service.create_student_with_courses(data)
+    return await service.create(data)
 
 
 @router.get(
@@ -32,7 +32,7 @@ async def get_student_with_courses(
     student_id: int,
     service: StudentsCoursesService = Depends(get_students_courses_service),
 ) -> Student:
-    return await service.get_student_with_courses(student_id)
+    return await service.get(student_id)
 
 
 @router.get(
@@ -46,7 +46,7 @@ async def get_students_with_courses_paginated_list(
     offset: int = Query(0, ge=0),
     service: StudentsCoursesService = Depends(get_students_courses_service),
 ):
-    return await service.get_students_with_courses_paginated_list(limit, offset)
+    return await service.get_paginated_list(limit, offset)
 
 
 @router.delete(
@@ -58,7 +58,7 @@ async def delete_student_with_courses(
     student_id: int,
     service: StudentsCoursesService = Depends(get_students_courses_service),
 ) -> None:
-    await service.delete_student_with_courses(student_id)
+    await service.delete(student_id)
 
 
 @router.patch(
@@ -71,5 +71,5 @@ async def update_student_with_courses(
     data: StudentUpdate,
     service: StudentsCoursesService = Depends(get_students_courses_service),
 ) -> CommonResponse:
-    await service.update_student_with_courses(student_id, data)
+    await service.update(student_id, data)
     return CommonResponse
