@@ -14,14 +14,14 @@ async def create_person_with_passport(
     data: PersonCreate,
     service: PersonsPassportsService = Depends(get_persons_passports_service)
 ) -> Person:
-    return await service.create_person_with_passport(data)
+    return await service.create(data)
 
 @router.get("/{person_id}", response_model=Person, summary="Get a person and their passport data", status_code=status.HTTP_200_OK)
 async def get_person_with_passport(
     person_id: int,
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> Person:
-    return await service.get_person_with_passport(person_id)
+    return await service.get(person_id)
 
 @router.get("", response_model=PersonsPaginatedList, summary="Get people and their passport data", status_code=status.HTTP_200_OK)
 async def get_persons_with_passports_paginated_list(
@@ -29,14 +29,14 @@ async def get_persons_with_passports_paginated_list(
     offset: int = Query(0, ge=0),
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> PersonsPaginatedList:
-    return await service.get_persons_with_passports_paginated_list(limit, offset)
+    return await service.get_paginated_list(limit, offset)
 
 @router.delete("/{person_id}", summary="Delete a person and their passport data", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_person_with_passport(
     person_id: int,
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> None:
-    await service.delete_person_with_passport(person_id)
+    await service.delete(person_id)
 
 @router.patch("/{person_id}", summary="Update person and passport data", status_code=status.HTTP_200_OK)
 async def update_person_with_passport(
@@ -44,5 +44,5 @@ async def update_person_with_passport(
     data: PersonUpdate,
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> CommonResponse:
-    await service.update_person_with_passport(person_id, data)
+    await service.update(person_id, data)
     return CommonResponse
