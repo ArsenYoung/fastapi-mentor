@@ -1,7 +1,7 @@
 from datetime import datetime
 import sqlalchemy as sa
 from sqlalchemy import Boolean, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column, DeclarativeMeta, declarative_base, registry
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeMeta, registry
 
 metadata = sa.MetaData()
 mapped_registry = registry(metadata=metadata)
@@ -22,7 +22,8 @@ class BaseServiceModel:
     is_deleted: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False
+        default=False,
+        server_default="False",
     )
 
 Base: DeclarativeMeta = mapped_registry.generate_base(cls=BaseServiceModel)

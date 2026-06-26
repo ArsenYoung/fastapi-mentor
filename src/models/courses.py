@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,22 +14,20 @@ class CoursesOrm(Base):
             "uq_courses_reestr_number_active",
             "reestr_number",
             unique=True,
-            postgresql_where=text("is_deleted = false")
+            postgresql_where=text("is_deleted = False"),
         ),
     )
 
     reestr_number: Mapped[str] = mapped_column(
         String(4),
-        nullable=False
+        nullable=False,
     )
     title: Mapped[str] = mapped_column(
         String(150),
-        nullable=False
+        nullable=False,
     )
-    student_link = relationship(
-        "StudentsCoursesOrm",
+
+    students: Mapped[List["StudentsOrm"]] = relationship(
+        secondary="students_courses",
         back_populates="courses",
-        cascade="all, delete-orphan",
-        primaryjoin="and_(CoursesOrm.id == StudentsCoursesOrm.course_id, StudentsCoursesOrm.is_deleted.is_(False))",
-        lazy="selectin",
     )

@@ -1,8 +1,8 @@
-"""ver 1
+"""version 1
 
-Revision ID: 087b5fab7c18
+Revision ID: 3e6a7cdaf808
 Revises: 621f2c8dda8f
-Create Date: 2026-06-16 20:59:17.774850
+Create Date: 2026-06-26 13:02:28.941860
 
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision: str = "087b5fab7c18"
+revision: str = "3e6a7cdaf808"
 down_revision: Union[str, Sequence[str], None] = "621f2c8dda8f"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -34,11 +34,15 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), server_default="False", nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
-        "uq_authors_author_code_active", "authors", ["author_code"], unique=True
+        "uq_authors_author_code_active",
+        "authors",
+        ["author_code"],
+        unique=True,
+        postgresql_where=sa.text("is_deleted = False"),
     )
     op.create_table(
         "courses",
@@ -52,7 +56,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), server_default="False", nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -60,7 +64,7 @@ def upgrade() -> None:
         "courses",
         ["reestr_number"],
         unique=True,
-        postgresql_where=sa.text("is_deleted = false"),
+        postgresql_where=sa.text("is_deleted = False"),
     )
     op.create_table(
         "persons",
@@ -74,7 +78,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), server_default="False", nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -90,7 +94,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), server_default="False", nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -98,7 +102,7 @@ def upgrade() -> None:
         "students",
         ["record_book_number"],
         unique=True,
-        postgresql_where=sa.text("is_deleted = false"),
+        postgresql_where=sa.text("is_deleted = False"),
     )
     op.create_table(
         "books",
@@ -113,11 +117,17 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), server_default="False", nullable=False),
         sa.ForeignKeyConstraint(["author_id"], ["authors.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("uq_books_book_code_active", "books", ["book_code"], unique=True)
+    op.create_index(
+        "uq_books_book_code_active",
+        "books",
+        ["book_code"],
+        unique=True,
+        postgresql_where=sa.text("is_deleted = False"),
+    )
     op.create_table(
         "passports",
         sa.Column("number", sa.String(length=10), nullable=False),
@@ -131,44 +141,80 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
+        sa.Column("is_deleted", sa.Boolean(), server_default="False", nullable=False),
         sa.ForeignKeyConstraint(["person_id"], ["persons.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("number"),
-        sa.UniqueConstraint("person_id"),
+    )
+    op.create_index(
+        "uq_passports_number_active",
+        "passports",
+        ["number"],
+        unique=True,
+        postgresql_where=sa.text("is_deleted = False"),
+    )
+    op.create_index(
+        "uq_passports_person_id_active",
+        "passports",
+        ["person_id"],
+        unique=True,
+        postgresql_where=sa.text("is_deleted = False"),
     )
     op.create_table(
         "students_courses",
         sa.Column("student_id", sa.Integer(), nullable=False),
         sa.Column("course_id", sa.Integer(), nullable=False),
-        sa.Column("is_deleted", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(["course_id"], ["courses.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["student_id"], ["students.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("student_id", "course_id"),
     )
+    op.drop_table("users")
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.create_table(
+        "users",
+        sa.Column("id", sa.UUID(), autoincrement=False, nullable=False),
+        sa.Column("username", sa.VARCHAR(), autoincrement=False, nullable=False),
+        sa.PrimaryKeyConstraint("id", name=op.f("users_pkey")),
+    )
     op.drop_table("students_courses")
+    op.drop_index(
+        "uq_passports_person_id_active",
+        table_name="passports",
+        postgresql_where=sa.text("is_deleted = False"),
+    )
+    op.drop_index(
+        "uq_passports_number_active",
+        table_name="passports",
+        postgresql_where=sa.text("is_deleted = False"),
+    )
     op.drop_table("passports")
-    op.drop_index("uq_books_book_code_active", table_name="books")
+    op.drop_index(
+        "uq_books_book_code_active",
+        table_name="books",
+        postgresql_where=sa.text("is_deleted = False"),
+    )
     op.drop_table("books")
     op.drop_index(
         "uq_students_record_book_number_active",
         table_name="students",
-        postgresql_where=sa.text("is_deleted = false"),
+        postgresql_where=sa.text("is_deleted = False"),
     )
     op.drop_table("students")
     op.drop_table("persons")
     op.drop_index(
         "uq_courses_reestr_number_active",
         table_name="courses",
-        postgresql_where=sa.text("is_deleted = false"),
+        postgresql_where=sa.text("is_deleted = False"),
     )
     op.drop_table("courses")
-    op.drop_index("uq_authors_author_code_active", table_name="authors")
+    op.drop_index(
+        "uq_authors_author_code_active",
+        table_name="authors",
+        postgresql_where=sa.text("is_deleted = False"),
+    )
     op.drop_table("authors")
     # ### end Alembic commands ###

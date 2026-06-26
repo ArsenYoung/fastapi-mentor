@@ -1,17 +1,19 @@
 from typing import List
 
-from sqlalchemy import Index, String
+from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base
 
 
 class AuthorsOrm(Base):
     __tablename__ = "authors"
+
     __table_args__ = (
         Index(
             "uq_authors_author_code_active",
-            "author_code",
+            "author_code", 
             unique=True,
+            postgresql_where=text("is_deleted = False"),
         ),
     )
 
@@ -28,7 +30,6 @@ class AuthorsOrm(Base):
         nullable=False,
     )
     books: Mapped[List["BooksOrm"]] = relationship(
-        "BooksOrm",
         back_populates="author",
         cascade="all, delete-orphan",
         primaryjoin="and_(AuthorsOrm.id == BooksOrm.author_id, BooksOrm.is_deleted.is_(False))",
