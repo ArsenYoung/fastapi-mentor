@@ -33,5 +33,6 @@ class StudentsOrm(Base):
     
     courses: Mapped[List["CoursesOrm"]] = relationship(
         secondary="students_courses",
-        back_populates="students"
+        back_populates="students",
+        lazy="selectin",
     )
