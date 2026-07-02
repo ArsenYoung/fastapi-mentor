@@ -8,7 +8,6 @@ from src.schemas.students import (
     StudentCourseUpdateRequest,
     StudentCreate,
     StudentsPaginatedList,
-    StudentUpdate,
 )
 
 
@@ -20,22 +19,6 @@ def map_student_create_to_orm(data: StudentCreate) -> StudentsOrm:
     )
 
 
-def map_student_update_to_values(data: StudentUpdate) -> dict[str, object]:
-    return data.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
-        exclude={"courses"},
-    )
-
-
-def map_student_update_courses(
-    data: StudentUpdate,
-) -> list[StudentCourseUpdateRequest] | None:
-    if "courses" not in data.model_fields_set or data.courses is None:
-        return None
-    return data.courses
-
-
 def map_course_payload_to_orm(
     data: CourseCreate | StudentCourseUpdateRequest,
 ) -> CoursesOrm:
@@ -43,12 +26,6 @@ def map_course_payload_to_orm(
         reestr_number=data.reestr_number,
         title=data.title,
     )
-
-
-def map_course_update_to_values(
-    data: CourseCreate | StudentCourseUpdateRequest,
-) -> dict[str, object]:
-    return {"title": data.title}
 
 
 def map_course_to_read(course: CoursesOrm) -> Course:
@@ -65,7 +42,17 @@ def map_student_to_read(student: StudentsOrm) -> Student:
         first_name=student.first_name,
         last_name=student.last_name,
         record_book_number=student.record_book_number,
-        courses=[map_course_to_read(course) for course in student.courses],
+        courses=[
+            map_course_to_read(course)
+            for course in sorted(
+                student.courses,
+                key=lambda item: (
+                    item.id is None,
+                    item.id or 0,
+                    item.reestr_number,
+                ),
+            )
+        ],
     )
 
 

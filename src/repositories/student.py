@@ -1,4 +1,4 @@
-from typing import Mapping
+from typing import Sequence
 
 from sqlalchemy import select
 
@@ -11,63 +11,36 @@ from src.repositories.base import BaseRepository
 class StudentRepository(BaseRepository[StudentsOrm]):
     model = StudentsOrm
 
-    async def create_course(self, course: CoursesOrm) -> CoursesOrm:
-        self.session.add(course)
-        await self.session.flush()
-        return course
-
-    async def update_course(
+    async def get_courses_by_reestr_numbers(
         self,
-        course: CoursesOrm,
-        values: Mapping[str, object],
-    ) -> CoursesOrm:
-        for field, value in values.items():
-            setattr(course, field, value)
-        return course
+        reestr_numbers: Sequence[str],
+    ) -> list[CoursesOrm]:
+        if not reestr_numbers:
+            return []
 
-    async def delete_course(self, course: CoursesOrm) -> None:
-        course.is_deleted = True
-
-    async def get_course_by_reestr_number(
-        self,
-        reestr_number: str,
-    ) -> CoursesOrm | None:
         stmt = select(CoursesOrm).where(
             CoursesOrm.is_deleted.is_(False),
-            CoursesOrm.reestr_number == reestr_number,
+            CoursesOrm.reestr_number.in_(reestr_numbers),
         )
         result = await self.session.execute(stmt)
-        return result.unique().scalar_one_or_none()
+        return list(result.unique().scalars().all())
 
-    async def attach_course(
+    async def get_course_ids_with_active_students(
         self,
-        student: StudentsOrm,
-        course: CoursesOrm,
-    ) -> None:
-        if course.id not in {existing_course.id for existing_course in student.courses}:
-            student.courses.append(course)
-            await self.session.flush()
+        courses: set[CoursesOrm],
+    ) -> set[int]:
+        course_ids = {course.id for course in courses if course.id is not None}
+        if not course_ids:
+            return set()
 
-    async def detach_course(
-        self,
-        student: StudentsOrm,
-        course: CoursesOrm,
-    ) -> None:
-        for existing_course in list(student.courses):
-            if existing_course.id == course.id:
-                student.courses.remove(existing_course)
-                await self.session.flush()
-                return
-
-    async def course_has_active_students(self, course: CoursesOrm) -> bool:
         stmt = (
-            select(StudentsCoursesOrm)
+            select(StudentsCoursesOrm.course_id)
             .join(StudentsOrm, StudentsCoursesOrm.student_id == StudentsOrm.id)
             .where(
-                StudentsCoursesOrm.course_id == course.id,
+                StudentsCoursesOrm.course_id.in_(course_ids),
                 StudentsOrm.is_deleted.is_(False),
             )
-            .limit(1)
+            .distinct()
         )
         result = await self.session.execute(stmt)
-        return result.first() is not None
+        return set(result.scalars().all())

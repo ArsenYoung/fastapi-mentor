@@ -5,12 +5,9 @@ from src.exceptions.authors_books import (
 )
 from src.mappers.authors_books import (
     map_author_create_to_orm,
-    map_author_update_books,
-    map_author_update_to_values,
     map_author_to_read,
     map_authors_paginated_list,
     map_book_update_to_orm,
-    map_book_update_to_values,
 )
 from src.repositories.author import AuthorRepository
 from src.schemas.authors import (
@@ -65,8 +62,8 @@ class AuthorsBooksService(BaseService):
         author = await self.repo.get(id=author_id)
         if author is None:
             raise AuthorNotFoundException(author_id=author_id)
-        for book in list(author.books):
-            await self.repo.delete_book(book)
+        for book in author.books:
+            book.is_deleted = True
         await self.repo.delete(author)
         self.logger.info("author_deleted", author_id=author.id)
 
@@ -75,52 +72,52 @@ class AuthorsBooksService(BaseService):
         if author is None:
             raise AuthorNotFoundException(author_id=author_id)
 
-        author_payload = map_author_update_to_values(data)
-        books_payload = map_author_update_books(data)
+        author_code = data.author_code
+        books = data.books
 
-        # проверяем поля автора
-        author_code = author_payload.get("author_code")
         if author_code is not None:
             existing_author = await self.repo.get(author_code=author_code)
             if existing_author is not None and existing_author.id != author_id:
                 raise AuthorAlreadyExistsException(author_code=author_code)
 
-        if books_payload is not None:
-            book_codes = [book.book_code for book in books_payload]
-
-            conflicting_book_code = None
-            existing_books = await self.repo.get_books_by_codes(book_codes)
-            for book in existing_books:
-                if book.author_id == author_id:
-                    continue
-                conflicting_book_code = book.book_code
-                break
-
-            if conflicting_book_code is not None:
-                raise BookAlreadyExistsException(book_code=conflicting_book_code)
-
-        if author_payload:
-            await self.repo.update(author, author_payload)
-
-        # обновляем список книг автора
-        if books_payload is not None:
-            existing_books_by_code = {book.book_code: book for book in author.books}
-            target_codes = {book_data.book_code for book_data in books_payload}
-
-            for book_data in books_payload:
-                existing_book = existing_books_by_code.get(book_data.book_code)
-                if existing_book is None:
-                    await self.repo.create_book(
-                        map_book_update_to_orm(author.id, book_data)
+        if books is not None:
+            conflicting_book = next(
+                (
+                    book
+                    for book in await self.repo.get_books_by_codes(
+                        [book.book_code for book in books]
                     )
-                    continue
-                await self.repo.update_book(
-                    existing_book,
-                    map_book_update_to_values(book_data),
+                    if book.author_id != author_id
+                ),
+                None,
+            )
+
+            if conflicting_book is not None:
+                raise BookAlreadyExistsException(
+                    book_code=conflicting_book.book_code,
                 )
 
-            for book in list(author.books):
+        await self.repo.update(
+            author,
+            data.model_dump(exclude_unset=True, exclude={"books"}),
+            exclude_none=True,
+        )
+
+        if books is not None:
+            existing_books_by_code = {book.book_code: book for book in author.books}
+            target_codes = {book_data.book_code for book_data in books}
+
+            for book_data in books:
+                book = existing_books_by_code.get(book_data.book_code)
+                if book is None:
+                    book = map_book_update_to_orm(book_data)
+                    author.books.add(book)
+
+                book.title = book_data.title
+                book.is_deleted = False
+
+            for book in author.books:
                 if book.book_code not in target_codes:
-                    await self.repo.delete_book(book)
+                    book.is_deleted = True
 
         self.logger.info("author_updated", author_id=author.id)

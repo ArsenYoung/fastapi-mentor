@@ -7,17 +7,14 @@ from src.schemas.authors import (
     AuthorBookUpdateRequest,
     AuthorCreate,
     AuthorsPaginatedList,
-    AuthorUpdate,
 )
 from src.schemas.books import Book
 
 
 def map_book_update_to_orm(
-    author_id: int,
     data: AuthorBookUpdateRequest,
 ) -> BooksOrm:
     return BooksOrm(
-        author_id=author_id,
         book_code=data.book_code,
         title=data.title,
     )
@@ -29,37 +26,14 @@ def map_author_create_to_orm(data: AuthorCreate) -> AuthorsOrm:
         first_name=data.first_name,
         last_name=data.last_name,
     )
-    author.books.extend(
-        BooksOrm(
-            book_code=book.book_code,
-            title=book.title,
+    for book in data.books:
+        author.books.add(
+            BooksOrm(
+                book_code=book.book_code,
+                title=book.title,
+            )
         )
-        for book in data.books
-    )
     return author
-
-
-def map_author_update_to_values(data: AuthorUpdate) -> dict[str, object]:
-    return data.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
-        exclude={"books"},
-    )
-
-
-def map_author_update_books(
-    data: AuthorUpdate,
-) -> list[AuthorBookUpdateRequest] | None:
-    if "books" not in data.model_fields_set or data.books is None:
-        return None
-    return data.books
-
-
-def map_book_update_to_values(data: AuthorBookUpdateRequest) -> dict[str, object]:
-    return {
-        "title": data.title,
-        "is_deleted": False,
-    }
 
 
 def map_book_to_read(book: BooksOrm) -> Book:
@@ -76,7 +50,13 @@ def map_author_to_read(author: AuthorsOrm) -> Author:
         author_code=author.author_code,
         first_name=author.first_name,
         last_name=author.last_name,
-        books=[map_book_to_read(book) for book in author.books],
+        books=[
+            map_book_to_read(book)
+            for book in sorted(
+                author.books,
+                key=lambda item: (item.id is None, item.id or 0, item.book_code),
+            )
+        ],
     )
 
 

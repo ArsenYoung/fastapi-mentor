@@ -4,10 +4,7 @@ from src.exceptions.students_courses import (
 )
 from src.mappers.students_courses import (
     map_course_payload_to_orm,
-    map_course_update_to_values,
     map_student_create_to_orm,
-    map_student_update_courses,
-    map_student_update_to_values,
     map_student_to_read,
     map_students_paginated_list,
 )
@@ -26,8 +23,6 @@ class StudentsCoursesService(BaseService):
         self.repo = repo
 
     async def create(self, data: StudentCreate) -> Student:
-        courses_data = data.courses
-
         existing_student = await self.repo.get(
             record_book_number=data.record_book_number
         )
@@ -37,26 +32,22 @@ class StudentsCoursesService(BaseService):
             )
 
         student = await self.repo.create(map_student_create_to_orm(data))
-        for course_data in courses_data:
-            reestr_number = course_data.reestr_number
-            course = await self.repo.get_course_by_reestr_number(reestr_number)
+        existing_courses_by_reestr_number = {
+            course.reestr_number: course
+            for course in await self.repo.get_courses_by_reestr_numbers(
+                [course.reestr_number for course in data.courses]
+            )
+        }
+        for course_data in data.courses:
+            course = existing_courses_by_reestr_number.get(course_data.reestr_number)
             if course is None:
-                course = await self.repo.create_course(
-                    map_course_payload_to_orm(course_data)
-                )
-            elif course.title != course_data.title:
-                await self.repo.update_course(
-                    course,
-                    map_course_update_to_values(course_data),
-                )
+                course = map_course_payload_to_orm(course_data)
 
-            await self.repo.attach_course(student, course)
+            course.title = course_data.title
+            student.courses.add(course)
 
         self.logger.info("student_created", student_id=student.id)
-        created_student = await self.repo.get(id=student.id)
-        if created_student is None:
-            raise StudentNotFoundException(student_id=student.id)
-        return map_student_to_read(created_student)
+        return map_student_to_read(student)
 
     async def get(self, student_id: int) -> Student:
         student = await self.repo.get(id=student_id)
@@ -81,23 +72,29 @@ class StudentsCoursesService(BaseService):
         student = await self.repo.get(id=student_id)
         if student is None:
             raise StudentNotFoundException(student_id=student_id)
-        for course in list(student.courses):
-            await self.repo.detach_course(student, course)
-            if not await self.repo.course_has_active_students(course):
-                await self.repo.delete_course(course)
-
+        detached_courses = set(student.courses)
+        student.courses.clear()
         await self.repo.delete(student)
+        active_course_ids = await self.repo.get_course_ids_with_active_students(
+            detached_courses,
+        )
+        orphan_courses = [
+            course
+            for course in detached_courses
+            if course.id not in active_course_ids
+        ]
+        for course in orphan_courses:
+            course.is_deleted = True
         self.logger.info("student_deleted", student_id=student.id)
 
     async def update(self, student_id: int, data: StudentUpdate) -> None:
         student = await self.repo.get(id=student_id)
         if student is None:
             raise StudentNotFoundException(student_id=student_id)
-        courses_data = map_student_update_courses(data)
-        student_data = map_student_update_to_values(data)
 
-        # проверяем уникальность номера зачетной книжки при его изменении
-        record_book_number = student_data.get("record_book_number")
+        record_book_number = data.record_book_number
+        courses = data.courses
+
         if record_book_number is not None:
             existing_student = await self.repo.get(
                 record_book_number=record_book_number
@@ -107,37 +104,39 @@ class StudentsCoursesService(BaseService):
                     record_book_number=record_book_number,
                 )
 
-        if student_data:
-            await self.repo.update(student, student_data)
-        if courses_data is not None:
-            # синхронизируем курсы студента с payload
-            existing_course_ids = {course.id for course in student.courses}
-            target_course_ids: set[int] = set()
-            for course_data in courses_data:
-                reestr_number = course_data.reestr_number
-                course = await self.repo.get_course_by_reestr_number(reestr_number)
+        await self.repo.update(
+            student,
+            data.model_dump(exclude_unset=True, exclude={"courses"}),
+            exclude_none=True,
+        )
+
+        if courses is not None:
+            existing_courses = await self.repo.get_courses_by_reestr_numbers(
+                [course.reestr_number for course in courses]
+            )
+            existing_courses_by_reestr_number = {
+                course.reestr_number: course
+                for course in existing_courses
+            }
+            previous_courses = set(student.courses)
+            student.courses.clear()
+
+            for course_data in courses:
+                course = existing_courses_by_reestr_number.get(
+                    course_data.reestr_number
+                )
                 if course is None:
-                    course = await self.repo.create_course(
-                        map_course_payload_to_orm(course_data)
-                    )
-                elif course.title != course_data.title:
-                    await self.repo.update_course(
-                        course,
-                        map_course_update_to_values(course_data),
-                    )
+                    course = map_course_payload_to_orm(course_data)
+                else:
+                    course.title = course_data.title
 
-                target_course_ids.add(course.id)
-                await self.repo.attach_course(student, course)
+                student.courses.add(course)
 
-            course_ids_to_detach = existing_course_ids - target_course_ids
-            courses_to_detach = [
-                course
-                for course in student.courses
-                if course.id in course_ids_to_detach
-            ]
-            for course in courses_to_detach:
-                await self.repo.detach_course(student, course)
-                # удаляем курс, если после отвязки он больше никому не назначен
-                if not await self.repo.course_has_active_students(course):
-                    await self.repo.delete_course(course)
+            detached_courses = previous_courses - student.courses
+            active_course_ids = await self.repo.get_course_ids_with_active_students(
+                detached_courses,
+            )
+            for course in detached_courses:
+                if course.id not in active_course_ids:
+                    course.is_deleted = True
         self.logger.info("student_updated", student_id=student.id)

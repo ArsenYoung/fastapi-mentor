@@ -3,7 +3,7 @@ from typing import Sequence
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
 from src.schemas.passports import Passport
-from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
+from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList
 
 
 def map_person_create_to_orm(data: PersonCreate) -> PersonsOrm:
@@ -14,23 +14,6 @@ def map_person_create_to_orm(data: PersonCreate) -> PersonsOrm:
             number=data.passport.number,
             registrated_in=data.passport.registrated_in,
         ),
-    )
-
-
-def map_person_update_to_values(data: PersonUpdate) -> dict[str, object]:
-    return data.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
-        exclude={"passport"},
-    )
-
-
-def map_passport_update_to_values(data: PersonUpdate) -> dict[str, object] | None:
-    if "passport" not in data.model_fields_set or data.passport is None:
-        return None
-    return data.passport.model_dump(
-        exclude_unset=True,
-        exclude_none=True,
     )
 
 

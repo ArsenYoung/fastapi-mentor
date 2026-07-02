@@ -3,9 +3,7 @@ from src.exceptions.persons_passports import (
     PersonNotFoundException,
 )
 from src.mappers.persons_passports import (
-    map_passport_update_to_values,
     map_person_create_to_orm,
-    map_person_update_to_values,
     map_person_to_read,
     map_persons_paginated_list,
 )
@@ -58,7 +56,7 @@ class PersonsPassportsService(BaseService):
         person = await self.repo.get(id=person_id)
         if person is None:
             raise PersonNotFoundException(person_id=person_id)
-        await self.repo.delete_passport(person.passport)
+        person.passport.is_deleted = True
         await self.repo.delete(person)
         self.logger.info(
             "person_deleted",
@@ -70,27 +68,28 @@ class PersonsPassportsService(BaseService):
         if person is None:
             raise PersonNotFoundException(person_id=person_id)
 
-        person_payload = map_person_update_to_values(data)
-        passport_payload = map_passport_update_to_values(data)
+        passport = data.passport
+        passport_number = passport.number if passport is not None else None
 
-        if passport_payload is not None:
-            passport_number = passport_payload.get("number")
-            if passport_number is not None:
-                existing_person = await self.repo.get_person_by_passport_number(
-                    passport_number
+        if passport_number is not None:
+            existing_person = await self.repo.get_person_by_passport_number(
+                passport_number
+            )
+            if existing_person is not None and existing_person.id != person_id:
+                raise PassportAlreadyExistsException(
+                    passport_number=passport_number,
                 )
-                if existing_person is not None and existing_person.id != person_id:
-                    raise PassportAlreadyExistsException(
-                        passport_number=passport_number,
-                    )
 
-        if person_payload:
-            await self.repo.update(person, person_payload)
-
-        if passport_payload is not None:
-            await self.repo.update_passport(
+        await self.repo.update(
+            person,
+            data.model_dump(exclude_unset=True, exclude={"passport"}),
+            exclude_none=True,
+        )
+        if passport is not None:
+            await self.repo.update(
                 person.passport,
-                passport_payload,
+                passport.model_dump(exclude_unset=True),
+                exclude_none=True,
             )
 
         self.logger.info(

@@ -1,5 +1,3 @@
-from typing import List
-
 from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,8 +25,9 @@ class CoursesOrm(Base):
         nullable=False,
     )
 
-    students: Mapped[List["StudentsOrm"]] = relationship(
+    students: Mapped[set["StudentsOrm"]] = relationship(
         secondary="students_courses",
         back_populates="courses",
+        collection_class=set,
         lazy="selectin",
     )

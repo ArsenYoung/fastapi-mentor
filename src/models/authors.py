@@ -1,5 +1,3 @@
-from typing import List
-
 from sqlalchemy import Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base
@@ -29,9 +27,10 @@ class AuthorsOrm(Base):
         String(50),
         nullable=False,
     )
-    books: Mapped[List["BooksOrm"]] = relationship(
+    books: Mapped[set["BooksOrm"]] = relationship(
         back_populates="author",
         cascade="all, delete-orphan",
+        collection_class=set,
         primaryjoin="and_(AuthorsOrm.id == BooksOrm.author_id, BooksOrm.is_deleted.is_(False))",
         lazy="selectin",
     )

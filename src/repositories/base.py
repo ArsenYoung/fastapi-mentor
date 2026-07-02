@@ -40,11 +40,18 @@ class BaseRepository(Generic[ModelT]):
         await self.session.flush()
         return instance
 
-    async def update(self, instance: ModelT, values: Mapping[str, Any]) -> ModelT:
+    async def update(
+        self,
+        instance: ModelT,
+        values: Mapping[str, Any],
+        *,
+        exclude_none: bool = False,
+    ) -> ModelT:
         for field, value in values.items():
+            if exclude_none and value is None:
+                continue
             setattr(instance, field, value)
         return instance
 
     async def delete(self, instance: ModelT) -> None:
         instance.is_deleted = True
-
