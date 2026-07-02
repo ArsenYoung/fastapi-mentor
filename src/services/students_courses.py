@@ -31,7 +31,7 @@ class StudentsCoursesService(BaseService):
                 record_book_number=data.record_book_number,
             )
 
-        student = await self.repo.create(map_student_create_to_orm(data))
+        student = map_student_create_to_orm(data)
         existing_courses_by_reestr_number = {
             course.reestr_number: course
             for course in await self.repo.get_courses_by_reestr_numbers(
@@ -46,6 +46,7 @@ class StudentsCoursesService(BaseService):
             course.title = course_data.title
             student.courses.add(course)
 
+        student = await self.repo.create(student)
         self.logger.info("student_created", student_id=student.id)
         return map_student_to_read(student)
 
@@ -100,11 +101,12 @@ class StudentsCoursesService(BaseService):
                     record_book_number=record_book_number,
                 )
 
-        await self.repo.update(
-            student,
-            data.model_dump(exclude_unset=True, exclude={"courses"}),
-            exclude_none=True,
-        )
+        if data.record_book_number is not None:
+            student.record_book_number = data.record_book_number
+        if data.first_name is not None:
+            student.first_name = data.first_name
+        if data.last_name is not None:
+            student.last_name = data.last_name
 
         if courses is not None:
             existing_courses = await self.repo.get_courses_by_reestr_numbers(
@@ -134,4 +136,5 @@ class StudentsCoursesService(BaseService):
             for course in detached_courses:
                 if course.id not in active_course_ids:
                     course.is_deleted = True
+        await self.repo.update(student)
         self.logger.info("student_updated", student_id=student.id)

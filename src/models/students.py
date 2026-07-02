@@ -33,5 +33,7 @@ class StudentsOrm(Base):
         secondary="students_courses",
         back_populates="students",
         collection_class=set,
+        primaryjoin="StudentsOrm.id == StudentsCoursesOrm.student_id",
+        secondaryjoin="and_(CoursesOrm.id == StudentsCoursesOrm.course_id, CoursesOrm.is_deleted.is_(False))",
         lazy="selectin",
     )

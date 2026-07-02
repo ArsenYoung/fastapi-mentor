@@ -78,18 +78,18 @@ class PersonsPassportsService(BaseService):
                     passport_number=passport_number,
                 )
 
-        await self.repo.update(
-            person,
-            data.model_dump(exclude_unset=True, exclude={"passport"}),
-            exclude_none=True,
-        )
-        if passport is not None:
-            await self.repo.update(
-                person.passport,
-                passport.model_dump(exclude_unset=True),
-                exclude_none=True,
-            )
+        if data.first_name is not None:
+            person.first_name = data.first_name
+        if data.last_name is not None:
+            person.last_name = data.last_name
 
+        if passport is not None:
+            if passport.number is not None:
+                person.passport.number = passport.number
+            if passport.registrated_in is not None:
+                person.passport.registrated_in = passport.registrated_in
+
+        await self.repo.update(person)
         self.logger.info(
             "person_updated",
             person_id=person.id,

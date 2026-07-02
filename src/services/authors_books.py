@@ -95,11 +95,12 @@ class AuthorsBooksService(BaseService):
                     book_code=conflicting_book.book_code,
                 )
 
-        await self.repo.update(
-            author,
-            data.model_dump(exclude_unset=True, exclude={"books"}),
-            exclude_none=True,
-        )
+        if data.author_code is not None:
+            author.author_code = data.author_code
+        if data.first_name is not None:
+            author.first_name = data.first_name
+        if data.last_name is not None:
+            author.last_name = data.last_name
 
         if books is not None:
             existing_books_by_code = {book.book_code: book for book in author.books}
@@ -118,4 +119,5 @@ class AuthorsBooksService(BaseService):
                 if book.book_code not in target_codes:
                     book.is_deleted = True
 
+        await self.repo.update(author)
         self.logger.info("author_updated", author_id=author.id)

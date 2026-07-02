@@ -42,11 +42,7 @@ def map_persons_paginated_list(
     offset: int,
 ) -> PersonsPaginatedList:
     return PersonsPaginatedList(
-        items=[
-            map_person_to_read(person)
-            for person in persons
-            if person.passport is not None
-        ],
+        items=[map_person_to_read(person) for person in persons],
         has_next=has_next,
         limit=limit,
         offset=offset,

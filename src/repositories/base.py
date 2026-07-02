@@ -1,4 +1,4 @@
-from typing import Any, Generic, Mapping, Sequence, TypeVar
+from typing import Any, Generic, Sequence, TypeVar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,17 +42,8 @@ class BaseRepository(Generic[ModelT]):
         await self.session.flush()
         return instance
 
-    async def update(
-        self,
-        instance: ModelT,
-        values: Mapping[str, Any],
-        *,
-        exclude_none: bool = False,
-    ) -> ModelT:
-        for field, value in values.items():
-            if exclude_none and value is None:
-                continue
-            setattr(instance, field, value)
+    async def update(self, instance: ModelT) -> ModelT:
+        await self.session.flush()
         return instance
 
     async def delete(self, instance: ModelT) -> None:
