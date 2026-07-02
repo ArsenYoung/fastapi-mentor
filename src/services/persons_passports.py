@@ -1,3 +1,7 @@
+from src.exceptions.persons_passports import (
+    PassportAlreadyExistsException,
+    PersonNotFoundException,
+)
 from src.mappers.persons_passports import (
     map_passport_update_to_values,
     map_person_create_to_orm,
@@ -6,7 +10,6 @@ from src.mappers.persons_passports import (
     map_persons_paginated_list,
 )
 from src.repositories.person import PersonRepository
-from src.schemas.errors import PassportErrorDetails, PersonErrorDetails
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
 from src.services.base import BaseService
 
@@ -20,9 +23,7 @@ class PersonsPassportsService(BaseService):
             data.passport.number
         )
         if existing_person is not None:
-            self._raise_already_exists(
-                message="A person with this passport number already exists",
-                details=PassportErrorDetails(passport_number=data.passport.number),
+            raise PassportAlreadyExistsException(
                 passport_number=data.passport.number,
             )
 
@@ -39,11 +40,7 @@ class PersonsPassportsService(BaseService):
     async def get(self, person_id: int) -> Person:
         person = await self.repo.get(id=person_id)
         if person is None:
-            self._raise_not_found(
-                message="Person not found",
-                details=PersonErrorDetails(person_id=person_id),
-                person_id=person_id,
-            )
+            raise PersonNotFoundException(person_id=person_id)
         return map_person_to_read(person)
 
     async def get_paginated_list(
@@ -60,11 +57,7 @@ class PersonsPassportsService(BaseService):
     async def delete(self, person_id: int) -> None:
         person = await self.repo.get(id=person_id)
         if person is None:
-            self._raise_not_found(
-                message="Person not found",
-                details=PersonErrorDetails(person_id=person_id),
-                person_id=person_id,
-            )
+            raise PersonNotFoundException(person_id=person_id)
         await self.repo.delete_passport(person.passport)
         await self.repo.delete(person)
         self.logger.info(
@@ -75,11 +68,7 @@ class PersonsPassportsService(BaseService):
     async def update(self, person_id: int, data: PersonUpdate) -> None:
         person = await self.repo.get(id=person_id)
         if person is None:
-            self._raise_not_found(
-                message="Person not found",
-                details=PersonErrorDetails(person_id=person_id),
-                person_id=person_id,
-            )
+            raise PersonNotFoundException(person_id=person_id)
 
         person_payload = map_person_update_to_values(data)
         passport_payload = map_passport_update_to_values(data)
@@ -91,11 +80,7 @@ class PersonsPassportsService(BaseService):
                     passport_number
                 )
                 if existing_person is not None and existing_person.id != person_id:
-                    self._raise_already_exists(
-                        message="A person with this passport number already exists",
-                        details=PassportErrorDetails(
-                            passport_number=passport_number
-                        ),
+                    raise PassportAlreadyExistsException(
                         passport_number=passport_number,
                     )
 

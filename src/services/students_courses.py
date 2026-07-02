@@ -1,3 +1,7 @@
+from src.exceptions.students_courses import (
+    StudentAlreadyExistsException,
+    StudentNotFoundException,
+)
 from src.mappers.students_courses import (
     map_course_payload_to_orm,
     map_course_update_to_values,
@@ -8,7 +12,6 @@ from src.mappers.students_courses import (
     map_students_paginated_list,
 )
 from src.repositories.student import StudentRepository
-from src.schemas.errors import StudentErrorDetails
 from src.schemas.students import (
     Student,
     StudentCreate,
@@ -29,11 +32,7 @@ class StudentsCoursesService(BaseService):
             record_book_number=data.record_book_number
         )
         if existing_student is not None:
-            self._raise_already_exists(
-                message="A student with this record book number already exists",
-                details=StudentErrorDetails(
-                    record_book_number=data.record_book_number,
-                ),
+            raise StudentAlreadyExistsException(
                 record_book_number=data.record_book_number,
             )
 
@@ -56,21 +55,13 @@ class StudentsCoursesService(BaseService):
         self.logger.info("student_created", student_id=student.id)
         created_student = await self.repo.get(id=student.id)
         if created_student is None:
-            self._raise_not_found(
-                message="Student not found",
-                details=StudentErrorDetails(student_id=student.id),
-                student_id=student.id,
-            )
+            raise StudentNotFoundException(student_id=student.id)
         return map_student_to_read(created_student)
 
     async def get(self, student_id: int) -> Student:
         student = await self.repo.get(id=student_id)
         if student is None:
-            self._raise_not_found(
-                message="Student not found",
-                details=StudentErrorDetails(student_id=student_id),
-                student_id=student_id,
-            )
+            raise StudentNotFoundException(student_id=student_id)
         return map_student_to_read(student)
 
     async def get_paginated_list(
@@ -89,11 +80,7 @@ class StudentsCoursesService(BaseService):
     async def delete(self, student_id: int) -> None:
         student = await self.repo.get(id=student_id)
         if student is None:
-            self._raise_not_found(
-                message="Student not found",
-                details=StudentErrorDetails(student_id=student_id),
-                student_id=student_id,
-            )
+            raise StudentNotFoundException(student_id=student_id)
         for course in list(student.courses):
             await self.repo.detach_course(student, course)
             if not await self.repo.course_has_active_students(course):
@@ -105,11 +92,7 @@ class StudentsCoursesService(BaseService):
     async def update(self, student_id: int, data: StudentUpdate) -> None:
         student = await self.repo.get(id=student_id)
         if student is None:
-            self._raise_not_found(
-                message="Student not found",
-                details=StudentErrorDetails(student_id=student_id),
-                student_id=student_id,
-            )
+            raise StudentNotFoundException(student_id=student_id)
         courses_data = map_student_update_courses(data)
         student_data = map_student_update_to_values(data)
 
@@ -120,11 +103,7 @@ class StudentsCoursesService(BaseService):
                 record_book_number=record_book_number
             )
             if existing_student is not None and existing_student.id != student_id:
-                self._raise_already_exists(
-                    message="A student with this record book number already exists",
-                    details=StudentErrorDetails(
-                        record_book_number=record_book_number,
-                    ),
+                raise StudentAlreadyExistsException(
                     record_book_number=record_book_number,
                 )
 

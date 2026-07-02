@@ -16,3 +16,11 @@ class AppException(Exception):
         if details is not None:
             self.details = details
         super().__init__(self.message)
+
+
+class ObjectNotFoundException(AppException):
+    message = "Object not found"
+
+
+class AlreadyExistsException(AppException):
+    message = "Object already exists"

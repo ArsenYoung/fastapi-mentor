@@ -14,9 +14,11 @@ from src.logging_context import (
 from fastapi import FastAPI, Request
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
-from src.exceptions.already_exists_exception import AlreadyExistsException
-from src.exceptions.app_exception import AppException
-from src.exceptions.object_not_found_exception import ObjectNotFoundException
+from src.exceptions.base import (
+    AlreadyExistsException,
+    AppException,
+    ObjectNotFoundException,
+)
 from src.router.healthcheck import router as healthcheck_router
 from src.router.authors_books import router as authors_books_router
 from src.router.persons_passports import router as persons_passports_router
