@@ -64,6 +64,7 @@ async def delete_student_with_courses(
 @router.patch(
     "/{student_id}",
     summary="Update student and course data",
+    response_model=CommonResponse,
     status_code=status.HTTP_200_OK,
 )
 async def update_student_with_courses(
@@ -72,4 +73,4 @@ async def update_student_with_courses(
     service: StudentsCoursesService = Depends(get_students_courses_service),
 ) -> CommonResponse:
     await service.update(student_id, data)
-    return CommonResponse
+    return CommonResponse()

@@ -13,6 +13,6 @@ class Book(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 class BookUpdate(BaseModel):
-    book_code: str | None = None
-    title: str | None = None
+    book_code: str | None = Field(default=None, min_length=1, max_length=6)
+    title: str | None = Field(default=None, min_length=1, max_length=100)
     is_deleted: bool | None = None

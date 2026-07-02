@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.schemas.courses import Course, CourseCreate
 
@@ -50,6 +50,13 @@ class StudentCreate(BaseModel):
     last_name: str = Field(min_length=1, max_length=50)
     record_book_number: str = Field(min_length=1, max_length=8)
     courses: List[CourseCreate]
+
+    @field_validator("courses")
+    @classmethod
+    def validate_courses(cls, courses: List[CourseCreate]) -> List[CourseCreate]:
+        validate_unique_course_reestr_numbers(courses)
+        return courses
+
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
     )
@@ -69,11 +76,35 @@ class StudentCourseUpdateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=150)
 
 
+def validate_unique_course_reestr_numbers(
+    courses: List[CourseCreate] | List[StudentCourseUpdateRequest] | None,
+) -> None:
+    if courses is None:
+        return
+
+    seen_numbers = set()
+
+    for course in courses:
+        if course.reestr_number in seen_numbers:
+            raise ValueError("Course reestr numbers must be unique")
+        seen_numbers.add(course.reestr_number)
+
+
 class StudentUpdate(BaseModel):
-    first_name: str | None = None
-    last_name: str | None = None
-    record_book_number: str | None = None
+    first_name: str | None = Field(default=None, min_length=1, max_length=50)
+    last_name: str | None = Field(default=None, min_length=1, max_length=50)
+    record_book_number: str | None = Field(default=None, min_length=1, max_length=8)
     courses: List[StudentCourseUpdateRequest] | None = None
+
+    @field_validator("courses")
+    @classmethod
+    def validate_courses(
+        cls,
+        courses: List[StudentCourseUpdateRequest] | None,
+    ) -> List[StudentCourseUpdateRequest] | None:
+        validate_unique_course_reestr_numbers(courses)
+        return courses
+
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )

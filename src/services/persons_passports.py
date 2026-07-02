@@ -1,9 +1,10 @@
 from src.mappers.persons_passports import (
+    map_passport_update_to_values,
     map_person_create_to_orm,
+    map_person_update_to_values,
     map_person_to_read,
     map_persons_paginated_list,
 )
-from src.models.passports import PassportsOrm
 from src.repositories.person import PersonRepository
 from src.schemas.errors import PassportErrorDetails, PersonErrorDetails
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
@@ -36,7 +37,7 @@ class PersonsPassportsService(BaseService):
         return map_person_to_read(person)
 
     async def get(self, person_id: int) -> Person:
-        person = await self.repo.get(person_id)
+        person = await self.repo.get(id=person_id)
         if person is None:
             self._raise_not_found(
                 message="Person not found",
@@ -57,22 +58,22 @@ class PersonsPassportsService(BaseService):
         )
 
     async def delete(self, person_id: int) -> None:
-        person = await self.repo.get(person_id)
+        person = await self.repo.get(id=person_id)
         if person is None:
             self._raise_not_found(
                 message="Person not found",
                 details=PersonErrorDetails(person_id=person_id),
                 person_id=person_id,
             )
-        await self.repo.delete(person.passport.id, model=PassportsOrm)
-        await self.repo.delete(person.id)
+        await self.repo.delete_passport(person.passport)
+        await self.repo.delete(person)
         self.logger.info(
             "person_deleted",
             person_id=person.id,
         )
 
     async def update(self, person_id: int, data: PersonUpdate) -> None:
-        person = await self.repo.get(person_id)
+        person = await self.repo.get(id=person_id)
         if person is None:
             self._raise_not_found(
                 message="Person not found",
@@ -80,8 +81,8 @@ class PersonsPassportsService(BaseService):
                 person_id=person_id,
             )
 
-        person_payload = data.model_dump(exclude_unset=True, exclude_none=True)
-        passport_payload = person_payload.pop("passport", None)
+        person_payload = map_person_update_to_values(data)
+        passport_payload = map_passport_update_to_values(data)
 
         if passport_payload is not None:
             passport_number = passport_payload.get("number")
@@ -99,13 +100,12 @@ class PersonsPassportsService(BaseService):
                     )
 
         if person_payload:
-            await self.repo.update(person_id, person_payload)
+            await self.repo.update(person, person_payload)
 
         if passport_payload is not None:
-            await self.repo.update(
-                person.passport.id,
+            await self.repo.update_passport(
+                person.passport,
                 passport_payload,
-                model=PassportsOrm,
             )
 
         self.logger.info(

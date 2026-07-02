@@ -38,11 +38,16 @@ async def delete_person_with_passport(
 ) -> None:
     await service.delete(person_id)
 
-@router.patch("/{person_id}", summary="Update person and passport data", status_code=status.HTTP_200_OK)
+@router.patch(
+    "/{person_id}",
+    response_model=CommonResponse,
+    summary="Update person and passport data",
+    status_code=status.HTTP_200_OK,
+)
 async def update_person_with_passport(
     person_id: int,
     data: PersonUpdate,
     service: PersonsPassportsService = Depends(get_persons_passports_service),
 ) -> CommonResponse:
     await service.update(person_id, data)
-    return CommonResponse
+    return CommonResponse()

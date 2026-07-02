@@ -43,8 +43,8 @@ class Course(BaseModel):
 
 
 class CourseUpdate(BaseModel):
-    reestr_number: str | None = None
-    title: str | None = None
+    reestr_number: str | None = Field(default=None, min_length=1, max_length=4)
+    title: str | None = Field(default=None, min_length=1, max_length=150)
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
     )

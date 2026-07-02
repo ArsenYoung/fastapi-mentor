@@ -26,5 +26,5 @@ class Passport(BaseModel):
 
 
 class PassportUpdate(BaseModel):
-    number: str | None = None
-    registrated_in: str | None = None
+    number: str | None = Field(default=None, min_length=1, max_length=10)
+    registrated_in: str | None = Field(default=None, min_length=1, max_length=200)

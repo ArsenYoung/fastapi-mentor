@@ -20,5 +20,6 @@ class PersonsOrm(Base):
         back_populates="person",
         primaryjoin="and_(PersonsOrm.id == PassportsOrm.person_id, PassportsOrm.is_deleted.is_(False))",
         cascade="all, delete-orphan",
+        lazy="selectin",
         uselist=False,
     )

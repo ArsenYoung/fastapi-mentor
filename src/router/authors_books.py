@@ -38,11 +38,16 @@ async def delete_author_with_books(
 ) -> None:
     await service.delete(author_id)
 
-@router.patch("/{author_id}", summary="Update author data", status_code=status.HTTP_200_OK)
+@router.patch(
+    "/{author_id}",
+    response_model=CommonResponse,
+    summary="Update author data",
+    status_code=status.HTTP_200_OK,
+)
 async def update_author_with_books(
     author_id: int,
     data: AuthorUpdate,
     service: AuthorsBooksService = Depends(get_authors_books_service),
 ) -> CommonResponse:
     await service.update(author_id, data)
-    return CommonResponse
+    return CommonResponse()
