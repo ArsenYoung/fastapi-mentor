@@ -14,14 +14,22 @@ class StudentRepository(BaseRepository[StudentsOrm]):
     async def get_courses_by_reestr_numbers(
         self,
         reestr_numbers: Sequence[str],
+        *,
+        for_update: bool = False,
     ) -> list[CoursesOrm]:
         if not reestr_numbers:
             return []
 
-        stmt = select(CoursesOrm).where(
-            CoursesOrm.is_deleted.is_(False),
-            CoursesOrm.reestr_number.in_(reestr_numbers),
+        stmt = (
+            select(CoursesOrm)
+            .where(
+                CoursesOrm.is_deleted.is_(False),
+                CoursesOrm.reestr_number.in_(reestr_numbers),
+            )
+            .order_by(CoursesOrm.reestr_number)
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
 

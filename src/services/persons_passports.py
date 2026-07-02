@@ -51,7 +51,7 @@ class PersonsPassportsService(BaseService):
         )
 
     async def delete(self, person_id: int) -> None:
-        person = await self.repo.get(id=person_id)
+        person = await self.repo.get(id=person_id, for_update=True)
         if person is None:
             raise PersonNotFoundException(person_id=person_id)
         person.passport.is_deleted = True
@@ -62,7 +62,7 @@ class PersonsPassportsService(BaseService):
         )
 
     async def update(self, person_id: int, data: PersonUpdate) -> None:
-        person = await self.repo.get(id=person_id)
+        person = await self.repo.get(id=person_id, for_update=True)
         if person is None:
             raise PersonNotFoundException(person_id=person_id)
 
@@ -71,7 +71,8 @@ class PersonsPassportsService(BaseService):
 
         if passport_number is not None:
             existing_person = await self.repo.get_person_by_passport_number(
-                passport_number
+                passport_number,
+                for_update=True,
             )
             if existing_person is not None and existing_person.id != person_id:
                 raise PassportAlreadyExistsException(

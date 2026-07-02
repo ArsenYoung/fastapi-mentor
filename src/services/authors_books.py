@@ -57,16 +57,20 @@ class AuthorsBooksService(BaseService):
         )
 
     async def delete(self, author_id: int) -> None:
-        author = await self.repo.get(id=author_id)
+        author = await self.repo.get(id=author_id, for_update=True)
         if author is None:
             raise AuthorNotFoundException(author_id=author_id)
+        await self.repo.get_books_by_codes(
+            [book.book_code for book in author.books],
+            for_update=True,
+        )
         for book in author.books:
             book.is_deleted = True
         await self.repo.delete(author)
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update(self, author_id: int, data: AuthorUpdate) -> None:
-        author = await self.repo.get(id=author_id)
+        author = await self.repo.get(id=author_id, for_update=True)
         if author is None:
             raise AuthorNotFoundException(author_id=author_id)
 
@@ -74,19 +78,25 @@ class AuthorsBooksService(BaseService):
         books = data.books
 
         if author_code is not None:
-            existing_author = await self.repo.get(author_code=author_code)
+            existing_author = await self.repo.get(
+                author_code=author_code,
+                for_update=True,
+            )
             if existing_author is not None and existing_author.id != author_id:
                 raise AuthorAlreadyExistsException(author_code=author_code)
 
         if books is not None:
+            current_books = set(author.books)
+            await self.repo.get_books_by_codes(
+                [book.book_code for book in current_books],
+                for_update=True,
+            )
+            existing_books = await self.repo.get_books_by_codes(
+                [book.book_code for book in books],
+                for_update=True,
+            )
             conflicting_book = next(
-                (
-                    book
-                    for book in await self.repo.get_books_by_codes(
-                        [book.book_code for book in books]
-                    )
-                    if book.author_id != author_id
-                ),
+                (book for book in existing_books if book.author_id != author_id),
                 None,
             )
 

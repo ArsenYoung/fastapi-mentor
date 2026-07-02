@@ -68,10 +68,14 @@ class StudentsCoursesService(BaseService):
         )
 
     async def delete(self, student_id: int) -> None:
-        student = await self.repo.get(id=student_id)
+        student = await self.repo.get(id=student_id, for_update=True)
         if student is None:
             raise StudentNotFoundException(student_id=student_id)
         detached_courses = set(student.courses)
+        await self.repo.get_courses_by_reestr_numbers(
+            [course.reestr_number for course in detached_courses],
+            for_update=True,
+        )
         student.courses.clear()
         await self.repo.delete(student)
         active_course_ids = await self.repo.get_course_ids_with_active_students(
@@ -85,7 +89,7 @@ class StudentsCoursesService(BaseService):
         self.logger.info("student_deleted", student_id=student.id)
 
     async def update(self, student_id: int, data: StudentUpdate) -> None:
-        student = await self.repo.get(id=student_id)
+        student = await self.repo.get(id=student_id, for_update=True)
         if student is None:
             raise StudentNotFoundException(student_id=student_id)
 
@@ -94,7 +98,8 @@ class StudentsCoursesService(BaseService):
 
         if record_book_number is not None:
             existing_student = await self.repo.get(
-                record_book_number=record_book_number
+                record_book_number=record_book_number,
+                for_update=True,
             )
             if existing_student is not None and existing_student.id != student_id:
                 raise StudentAlreadyExistsException(
@@ -109,13 +114,18 @@ class StudentsCoursesService(BaseService):
             student.last_name = data.last_name
 
         if courses is not None:
+            previous_courses = set(student.courses)
+            await self.repo.get_courses_by_reestr_numbers(
+                [course.reestr_number for course in previous_courses],
+                for_update=True,
+            )
             existing_courses = await self.repo.get_courses_by_reestr_numbers(
-                [course.reestr_number for course in courses]
+                [course.reestr_number for course in courses],
+                for_update=True,
             )
             existing_courses_by_reestr_number = {
                 course.reestr_number: course for course in existing_courses
             }
-            previous_courses = set(student.courses)
             student.courses.clear()
 
             for course_data in courses:
