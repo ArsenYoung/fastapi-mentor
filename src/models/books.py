@@ -21,11 +21,11 @@ class BooksOrm(Base):
         nullable=False,
     )
     book_code: Mapped[str] = mapped_column(
-        String(6), 
+        String(6),
         nullable=False,
     )
     title: Mapped[str] = mapped_column(
-        String(100), 
+        String(100),
         nullable=False,
     )
     author: Mapped["AuthorsOrm"] = relationship(

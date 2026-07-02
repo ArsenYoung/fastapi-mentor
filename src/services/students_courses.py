@@ -58,9 +58,7 @@ class StudentsCoursesService(BaseService):
     async def get_paginated_list(
         self, limit: int, offset: int
     ) -> StudentsPaginatedList:
-        students, has_next = await self.repo.get_paginated_list(
-            limit, offset
-        )
+        students, has_next = await self.repo.get_paginated_list(limit, offset)
         return map_students_paginated_list(
             students,
             has_next=has_next,
@@ -79,9 +77,7 @@ class StudentsCoursesService(BaseService):
             detached_courses,
         )
         orphan_courses = [
-            course
-            for course in detached_courses
-            if course.id not in active_course_ids
+            course for course in detached_courses if course.id not in active_course_ids
         ]
         for course in orphan_courses:
             course.is_deleted = True
@@ -115,8 +111,7 @@ class StudentsCoursesService(BaseService):
                 [course.reestr_number for course in courses]
             )
             existing_courses_by_reestr_number = {
-                course.reestr_number: course
-                for course in existing_courses
+                course.reestr_number: course for course in existing_courses
             }
             previous_courses = set(student.courses)
             student.courses.clear()

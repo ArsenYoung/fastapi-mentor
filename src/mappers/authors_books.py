@@ -68,10 +68,7 @@ def map_authors_paginated_list(
     offset: int,
 ) -> AuthorsPaginatedList:
     return AuthorsPaginatedList(
-        items=[
-            map_author_to_read(author)
-            for author in authors
-        ],
+        items=[map_author_to_read(author) for author in authors],
         has_next=has_next,
         limit=limit,
         offset=offset,

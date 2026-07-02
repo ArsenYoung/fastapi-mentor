@@ -64,10 +64,7 @@ def map_students_paginated_list(
     offset: int,
 ) -> StudentsPaginatedList:
     return StudentsPaginatedList(
-        items=[
-            map_student_to_read(student)
-            for student in students
-        ],
+        items=[map_student_to_read(student) for student in students],
         has_next=has_next,
         limit=limit,
         offset=offset,

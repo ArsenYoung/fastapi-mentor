@@ -17,18 +17,18 @@ class StudentsOrm(Base):
     )
 
     first_name: Mapped[str] = mapped_column(
-        String(50), 
+        String(50),
         nullable=False,
     )
     last_name: Mapped[str] = mapped_column(
-        String(50), 
+        String(50),
         nullable=False,
     )
     record_book_number: Mapped[str] = mapped_column(
-        String(8), 
+        String(8),
         nullable=False,
     )
-    
+
     courses: Mapped[set["CoursesOrm"]] = relationship(
         secondary="students_courses",
         back_populates="students",

@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ErrorDetails(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
 
 
 class AuthorErrorDetails(ErrorDetails):
@@ -43,11 +43,11 @@ ErrorDetailsType = (
 
 
 class ErrorPayload(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
     message: str = Field(description="Error message")
     details: ErrorDetailsType = None
 
 
 class ErrorResponse(BaseModel):
-    model_config = ConfigDict(extra='forbid')
+    model_config = ConfigDict(extra="forbid")
     error: ErrorPayload

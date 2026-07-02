@@ -56,8 +56,8 @@ def get_app() -> FastAPI:
     logger = structlog.get_logger()
 
     app = FastAPI(
-        docs_url='/docs',
-        openapi_url='/openapi.json',
+        docs_url="/docs",
+        openapi_url="/openapi.json",
         default_response_class=JSONResponse,
     )
 
@@ -91,42 +91,33 @@ def get_app() -> FastAPI:
             return response
 
     @app.exception_handler(ObjectNotFoundException)
-    async def not_found_handler(
-        request: Request,
-        exc: ObjectNotFoundException
-    ):
+    async def not_found_handler(request: Request, exc: ObjectNotFoundException):
         logger.warning(
             "object_not_found",
             path=request.url.path,
-            message=getattr(exc, "message", "Object not found")
+            message=getattr(exc, "message", "Object not found"),
         )
         return get_error_response(
             status_code=404,
             message=getattr(exc, "message", "Object not found"),
             details=getattr(exc, "details", None),
         )
-    
+
     @app.exception_handler(AlreadyExistsException)
-    async def already_exists_handler(
-        request: Request,
-        exc: AlreadyExistsException
-    ):
+    async def already_exists_handler(request: Request, exc: AlreadyExistsException):
         logger.warning(
             "already_exists",
             path=request.url.path,
-            message=getattr(exc, "message", "Object already exists")
+            message=getattr(exc, "message", "Object already exists"),
         )
         return get_error_response(
             status_code=409,
             message=getattr(exc, "message", "Object already exists"),
             details=getattr(exc, "details", None),
         )
-    
+
     @app.exception_handler(AppException)
-    async def unexpected_error_handler(
-        request: Request,
-        exc: AppException
-    ):
+    async def unexpected_error_handler(request: Request, exc: AppException):
         logger.exception(
             "app_exception",
             path=request.url.path,
@@ -139,10 +130,10 @@ def get_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=['*'],
+        allow_origins=["*"],
         allow_credentials=True,
-        allow_methods=['*'],
-        allow_headers=['*'],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     app.include_router(healthcheck_router)

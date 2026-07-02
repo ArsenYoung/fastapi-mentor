@@ -23,11 +23,11 @@ class PassportsOrm(Base):
     )
 
     number: Mapped[str] = mapped_column(
-        String(10), 
+        String(10),
         nullable=False,
     )
     registrated_in: Mapped[str] = mapped_column(
-        String(200), 
+        String(200),
         nullable=False,
     )
     person_id: Mapped[int] = mapped_column(

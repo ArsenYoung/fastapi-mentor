@@ -44,9 +44,7 @@ class AuthorsBooksService(BaseService):
             raise AuthorNotFoundException(author_id=author_id)
         return map_author_to_read(author)
 
-    async def get_paginated_list(
-        self, limit: int, offset: int
-    ) -> AuthorsPaginatedList:
+    async def get_paginated_list(self, limit: int, offset: int) -> AuthorsPaginatedList:
         authors, has_next = await self.repo.get_paginated_list(
             limit,
             offset,

@@ -9,7 +9,7 @@ class AuthorsOrm(Base):
     __table_args__ = (
         Index(
             "uq_authors_author_code_active",
-            "author_code", 
+            "author_code",
             unique=True,
             postgresql_where=text("is_deleted = False"),
         ),

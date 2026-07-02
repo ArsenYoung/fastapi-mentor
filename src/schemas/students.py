@@ -19,7 +19,7 @@ JSON_EXAMPLE_ADD_REQUEST = {
                     "reestr_number": "ICBN",
                     "title": "Computer Science",
                 },
-            ]
+            ],
         }
     ]
 }
@@ -39,7 +39,7 @@ JSON_EXAMPLE_PATCH_REQUEST = {
                     "reestr_number": "ICBN",
                     "title": "Computer Science",
                 },
-            ]
+            ],
         }
     ]
 }
@@ -57,9 +57,7 @@ class StudentCreate(BaseModel):
         validate_unique_course_reestr_numbers(courses)
         return courses
 
-    model_config = ConfigDict(
-        json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
-    )
+    model_config = ConfigDict(json_schema_extra=JSON_EXAMPLE_ADD_REQUEST)
 
 
 class Student(BaseModel):
@@ -105,9 +103,8 @@ class StudentUpdate(BaseModel):
         validate_unique_course_reestr_numbers(courses)
         return courses
 
-    model_config = ConfigDict(
-        json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
-    )
+    model_config = ConfigDict(json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST)
+
 
 class StudentsPaginatedList(BaseModel):
     items: List[Student]

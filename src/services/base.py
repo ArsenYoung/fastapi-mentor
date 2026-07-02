@@ -1,5 +1,5 @@
 import structlog
 
 
-class BaseService():
+class BaseService:
     logger = structlog.get_logger()

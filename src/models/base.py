@@ -26,5 +26,6 @@ class BaseServiceModel:
         server_default="False",
     )
 
+
 Base: DeclarativeMeta = mapped_registry.generate_base(cls=BaseServiceModel)
 AssociationBase = mapped_registry.generate_base()

@@ -22,7 +22,9 @@ class BaseRepository(Generic[ModelT]):
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
 
-    async def get_paginated_list(self, limit: int, offset: int) -> tuple[Sequence[ModelT], bool]:
+    async def get_paginated_list(
+        self, limit: int, offset: int
+    ) -> tuple[Sequence[ModelT], bool]:
         stmt = (
             select(self.model)
             .where(self.model.is_deleted.is_(False))

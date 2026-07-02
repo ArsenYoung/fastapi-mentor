@@ -30,9 +30,7 @@ JSON_EXAMPLE_PATCH_REQUEST = {
 class CourseCreate(BaseModel):
     reestr_number: str = Field(min_length=1, max_length=4)
     title: str = Field(min_length=1, max_length=150)
-    model_config = ConfigDict(
-        json_schema_extra=JSON_EXAMPLE_ADD_REQUEST
-    )
+    model_config = ConfigDict(json_schema_extra=JSON_EXAMPLE_ADD_REQUEST)
 
 
 class Course(BaseModel):
@@ -45,6 +43,4 @@ class Course(BaseModel):
 class CourseUpdate(BaseModel):
     reestr_number: str | None = Field(default=None, min_length=1, max_length=4)
     title: str | None = Field(default=None, min_length=1, max_length=150)
-    model_config = ConfigDict(
-        json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST
-    )
+    model_config = ConfigDict(json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST)

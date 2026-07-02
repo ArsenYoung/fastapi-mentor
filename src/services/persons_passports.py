@@ -41,9 +41,7 @@ class PersonsPassportsService(BaseService):
             raise PersonNotFoundException(person_id=person_id)
         return map_person_to_read(person)
 
-    async def get_paginated_list(
-        self, limit: int, offset: int
-    ) -> PersonsPaginatedList:
+    async def get_paginated_list(self, limit: int, offset: int) -> PersonsPaginatedList:
         persons, has_next = await self.repo.get_paginated_list(limit, offset)
         return map_persons_paginated_list(
             persons,

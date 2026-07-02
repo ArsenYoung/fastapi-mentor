@@ -4,17 +4,19 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from src.schemas.books import Book, BookCreate
 
-JSON_EXAMPLE = {"examples": [
-    {
-        "author_code": "000001",
-        "first_name": "Leo",
-        "last_name": "Tolstoy",
-        "books": [
-            {"book_code": "000001", "title": "War and Peace"},
-            {"book_code": "000002", "title": "Sunday"},
-        ],
-    }
-]}
+JSON_EXAMPLE = {
+    "examples": [
+        {
+            "author_code": "000001",
+            "first_name": "Leo",
+            "last_name": "Tolstoy",
+            "books": [
+                {"book_code": "000001", "title": "War and Peace"},
+                {"book_code": "000002", "title": "Sunday"},
+            ],
+        }
+    ]
+}
 
 JSON_EXAMPLE_PATCH_REQUEST = {
     "examples": [
@@ -29,6 +31,7 @@ JSON_EXAMPLE_PATCH_REQUEST = {
         }
     ]
 }
+
 
 class AuthorCreate(BaseModel):
     author_code: str = Field(min_length=1, max_length=6)
@@ -93,6 +96,7 @@ class AuthorUpdate(BaseModel):
     model_config = ConfigDict(
         json_schema_extra=JSON_EXAMPLE_PATCH_REQUEST,
     )
+
 
 class AuthorsPaginatedList(BaseModel):
     items: List[Author]
