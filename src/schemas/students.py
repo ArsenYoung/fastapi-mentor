@@ -1,6 +1,7 @@
 from typing import List
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from src.schemas.courses import Course, CourseCreate
 
@@ -55,7 +56,10 @@ class StudentCreate(BaseModel):
     @classmethod
     def validate_courses(cls, courses: List[CourseCreate]) -> List[CourseCreate]:
         if not courses:
-            raise ValueError("At least one course is required")
+            raise PydanticCustomError(
+                "courses_required",
+                "At least one course is required",
+            )
         validate_unique_course_reestr_numbers(courses)
         return courses
 
@@ -80,13 +84,19 @@ def validate_unique_course_reestr_numbers(
     courses: List[CourseCreate] | List[StudentCourseUpdateRequest] | None,
 ) -> None:
     if courses is None:
-        return
+        raise PydanticCustomError(
+            "courses_null",
+            "Courses list cannot be null",
+        )
 
     seen_numbers = set()
 
     for course in courses:
         if course.reestr_number in seen_numbers:
-            raise ValueError("Course reestr numbers must be unique")
+            raise PydanticCustomError(
+                "course_reestr_numbers_not_unique",
+                "Course reestr numbers must be unique",
+            )
         seen_numbers.add(course.reestr_number)
 
 

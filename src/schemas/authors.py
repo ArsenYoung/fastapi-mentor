@@ -1,6 +1,7 @@
 from typing import List
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic_core import PydanticCustomError
 
 from src.schemas.books import Book, BookCreate
 
@@ -43,7 +44,10 @@ class AuthorCreate(BaseModel):
     @classmethod
     def validate_books(cls, books: List[BookCreate]) -> List[BookCreate]:
         if not books:
-            raise ValueError("At least one book is required")
+            raise PydanticCustomError(
+                "books_required",
+                "At least one book is required",
+            )
         validate_unique_book_codes(books)
         return books
 
@@ -70,13 +74,19 @@ def validate_unique_book_codes(
     books: List[BookCreate] | List[AuthorBookUpdateRequest] | None,
 ) -> None:
     if books is None:
-        return
+        raise PydanticCustomError(
+            "books_null",
+            "Books list cannot be null",
+        )
 
     seen_codes = set()
 
     for book in books:
         if book.book_code in seen_codes:
-            raise ValueError("Book codes must be unique")
+            raise PydanticCustomError(
+                "book_codes_not_unique",
+                "Book codes must be unique",
+            )
         seen_codes.add(book.book_code)
 
 
