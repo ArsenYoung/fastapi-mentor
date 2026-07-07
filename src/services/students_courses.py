@@ -1,7 +1,4 @@
-from src.exceptions.students_courses import (
-    StudentAlreadyExistsException,
-    StudentNotFoundException,
-)
+from src.exceptions.base import AlreadyExistsException, ObjectNotFoundException
 from src.mappers.students_courses import (
     map_course_payload_to_orm,
     map_student_create_to_orm,
@@ -15,6 +12,7 @@ from src.schemas.students import (
     StudentUpdate,
     StudentsPaginatedList,
 )
+from src.schemas.errors import StudentErrorDetails
 from src.services.base import BaseService
 
 
@@ -27,8 +25,11 @@ class StudentsCoursesService(BaseService):
             record_book_number=data.record_book_number
         )
         if existing_student is not None:
-            raise StudentAlreadyExistsException(
-                record_book_number=data.record_book_number,
+            raise AlreadyExistsException(
+                message="A student with this record book number already exists",
+                details=StudentErrorDetails(
+                    record_book_number=data.record_book_number,
+                ),
             )
 
         student = map_student_create_to_orm(data)
@@ -53,7 +54,10 @@ class StudentsCoursesService(BaseService):
     async def get(self, student_id: int) -> Student:
         student = await self.repo.get(id=student_id)
         if student is None:
-            raise StudentNotFoundException(student_id=student_id)
+            raise ObjectNotFoundException(
+                message="Student not found",
+                details=StudentErrorDetails(student_id=student_id),
+            )
         return map_student_to_read(student)
 
     async def get_paginated_list(
@@ -70,7 +74,10 @@ class StudentsCoursesService(BaseService):
     async def delete(self, student_id: int) -> None:
         student = await self.repo.get(id=student_id, for_update=True)
         if student is None:
-            raise StudentNotFoundException(student_id=student_id)
+            raise ObjectNotFoundException(
+                message="Student not found",
+                details=StudentErrorDetails(student_id=student_id),
+            )
         detached_courses = set(student.courses)
         await self.repo.get_courses_by_reestr_numbers(
             [course.reestr_number for course in detached_courses],
@@ -91,7 +98,10 @@ class StudentsCoursesService(BaseService):
     async def update(self, student_id: int, data: StudentUpdate) -> None:
         student = await self.repo.get(id=student_id, for_update=True)
         if student is None:
-            raise StudentNotFoundException(student_id=student_id)
+            raise ObjectNotFoundException(
+                message="Student not found",
+                details=StudentErrorDetails(student_id=student_id),
+            )
 
         record_book_number = data.record_book_number
         courses = data.courses
@@ -102,8 +112,11 @@ class StudentsCoursesService(BaseService):
                 for_update=True,
             )
             if existing_student is not None and existing_student.id != student_id:
-                raise StudentAlreadyExistsException(
-                    record_book_number=record_book_number,
+                raise AlreadyExistsException(
+                    message="A student with this record book number already exists",
+                    details=StudentErrorDetails(
+                        record_book_number=record_book_number,
+                    ),
                 )
 
         if data.record_book_number is not None:

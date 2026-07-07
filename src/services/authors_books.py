@@ -1,8 +1,4 @@
-from src.exceptions.authors_books import (
-    AuthorAlreadyExistsException,
-    AuthorNotFoundException,
-    BookAlreadyExistsException,
-)
+from src.exceptions.base import AlreadyExistsException, ObjectNotFoundException
 from src.mappers.authors_books import (
     map_author_create_to_orm,
     map_author_to_read,
@@ -16,6 +12,7 @@ from src.schemas.authors import (
     AuthorsPaginatedList,
     AuthorUpdate,
 )
+from src.schemas.errors import AuthorErrorDetails, BookErrorDetails
 from src.services.base import BaseService
 
 
@@ -26,13 +23,19 @@ class AuthorsBooksService(BaseService):
     async def create(self, data: AuthorCreate) -> Author:
         existing_author = await self.repo.get(author_code=data.author_code)
         if existing_author is not None:
-            raise AuthorAlreadyExistsException(author_code=data.author_code)
+            raise AlreadyExistsException(
+                message="An author with this code already exists",
+                details=AuthorErrorDetails(author_code=data.author_code),
+            )
 
         book_codes = [book.book_code for book in data.books]
         existing_books = await self.repo.get_books_by_codes(book_codes)
         if existing_books:
             conflicting_book_code = existing_books[0].book_code
-            raise BookAlreadyExistsException(book_code=conflicting_book_code)
+            raise AlreadyExistsException(
+                message="A book with this code already exists",
+                details=BookErrorDetails(book_code=conflicting_book_code),
+            )
 
         author = await self.repo.create(map_author_create_to_orm(data))
         self.logger.info("author_created", author_id=author.id)
@@ -41,7 +44,10 @@ class AuthorsBooksService(BaseService):
     async def get(self, author_id: int) -> Author:
         author = await self.repo.get(id=author_id)
         if author is None:
-            raise AuthorNotFoundException(author_id=author_id)
+            raise ObjectNotFoundException(
+                message="Author not found",
+                details=AuthorErrorDetails(author_id=author_id),
+            )
         return map_author_to_read(author)
 
     async def get_paginated_list(self, limit: int, offset: int) -> AuthorsPaginatedList:
@@ -59,7 +65,10 @@ class AuthorsBooksService(BaseService):
     async def delete(self, author_id: int) -> None:
         author = await self.repo.get(id=author_id, for_update=True)
         if author is None:
-            raise AuthorNotFoundException(author_id=author_id)
+            raise ObjectNotFoundException(
+                message="Author not found",
+                details=AuthorErrorDetails(author_id=author_id),
+            )
         await self.repo.get_books_by_codes(
             [book.book_code for book in author.books],
             for_update=True,
@@ -72,7 +81,10 @@ class AuthorsBooksService(BaseService):
     async def update(self, author_id: int, data: AuthorUpdate) -> None:
         author = await self.repo.get(id=author_id, for_update=True)
         if author is None:
-            raise AuthorNotFoundException(author_id=author_id)
+            raise ObjectNotFoundException(
+                message="Author not found",
+                details=AuthorErrorDetails(author_id=author_id),
+            )
 
         author_code = data.author_code
         books = data.books
@@ -83,7 +95,10 @@ class AuthorsBooksService(BaseService):
                 for_update=True,
             )
             if existing_author is not None and existing_author.id != author_id:
-                raise AuthorAlreadyExistsException(author_code=author_code)
+                raise AlreadyExistsException(
+                    message="An author with this code already exists",
+                    details=AuthorErrorDetails(author_code=author_code),
+                )
 
         if books is not None:
             current_books = set(author.books)
@@ -101,8 +116,11 @@ class AuthorsBooksService(BaseService):
             )
 
             if conflicting_book is not None:
-                raise BookAlreadyExistsException(
-                    book_code=conflicting_book.book_code,
+                raise AlreadyExistsException(
+                    message="A book with this code already exists",
+                    details=BookErrorDetails(
+                        book_code=conflicting_book.book_code,
+                    ),
                 )
 
         if data.author_code is not None:
