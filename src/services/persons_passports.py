@@ -1,9 +1,5 @@
 from src.exceptions.base import AlreadyExistsException, ObjectNotFoundException
-from src.mappers.persons_passports import (
-    map_person_create_to_orm,
-    map_person_to_read,
-    map_persons_paginated_list,
-)
+from src.mappers.persons_passports import PersonsPassportsMapper
 from src.repositories.person import PersonRepository
 from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList, PersonUpdate
 from src.schemas.errors import PassportErrorDetails, PersonErrorDetails
@@ -11,8 +7,9 @@ from src.services.base import BaseService
 
 
 class PersonsPassportsService(BaseService):
-    def __init__(self, repo: PersonRepository):
+    def __init__(self, repo: PersonRepository, mapper: PersonsPassportsMapper):
         self.repo = repo
+        self.mapper = mapper
 
     async def create(self, data: PersonCreate) -> Person:
         existing_person = await self.repo.get_person_by_passport_number(
@@ -27,14 +24,14 @@ class PersonsPassportsService(BaseService):
             )
 
         person = await self.repo.create(
-            map_person_create_to_orm(data),
+            self.mapper.map_person_create_to_orm(data),
         )
         self.logger.info(
             "person_created",
             person_id=person.id,
             passport_id=person.passport.id,
         )
-        return map_person_to_read(person)
+        return self.mapper.map_person_to_read(person)
 
     async def get(self, person_id: int) -> Person:
         person = await self.repo.get(id=person_id)
@@ -43,11 +40,11 @@ class PersonsPassportsService(BaseService):
                 message="Person not found",
                 details=PersonErrorDetails(person_id=person_id),
             )
-        return map_person_to_read(person)
+        return self.mapper.map_person_to_read(person)
 
     async def get_paginated_list(self, limit: int, offset: int) -> PersonsPaginatedList:
         persons, has_next = await self.repo.get_paginated_list(limit, offset)
-        return map_persons_paginated_list(
+        return self.mapper.map_persons_paginated_list(
             persons,
             has_next=has_next,
             limit=limit,

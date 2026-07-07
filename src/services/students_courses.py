@@ -1,10 +1,5 @@
 from src.exceptions.base import AlreadyExistsException, ObjectNotFoundException
-from src.mappers.students_courses import (
-    map_course_payload_to_orm,
-    map_student_create_to_orm,
-    map_student_to_read,
-    map_students_paginated_list,
-)
+from src.mappers.students_courses import StudentCoursesMapper
 from src.repositories.student import StudentRepository
 from src.schemas.students import (
     Student,
@@ -17,8 +12,9 @@ from src.services.base import BaseService
 
 
 class StudentsCoursesService(BaseService):
-    def __init__(self, repo: StudentRepository):
+    def __init__(self, repo: StudentRepository, mapper: StudentCoursesMapper):
         self.repo = repo
+        self.mapper = mapper
 
     async def create(self, data: StudentCreate) -> Student:
         existing_student = await self.repo.get(
@@ -32,7 +28,7 @@ class StudentsCoursesService(BaseService):
                 ),
             )
 
-        student = map_student_create_to_orm(data)
+        student = self.mapper.map_student_create_to_orm(data)
         existing_courses_by_reestr_number = {
             course.reestr_number: course
             for course in await self.repo.get_courses_by_reestr_numbers(
@@ -42,14 +38,14 @@ class StudentsCoursesService(BaseService):
         for course_data in data.courses:
             course = existing_courses_by_reestr_number.get(course_data.reestr_number)
             if course is None:
-                course = map_course_payload_to_orm(course_data)
+                course = self.mapper.map_course_payload_to_orm(course_data)
 
             course.title = course_data.title
             student.courses.add(course)
 
         student = await self.repo.create(student)
         self.logger.info("student_created", student_id=student.id)
-        return map_student_to_read(student)
+        return self.mapper.map_student_to_read(student)
 
     async def get(self, student_id: int) -> Student:
         student = await self.repo.get(id=student_id)
@@ -58,13 +54,13 @@ class StudentsCoursesService(BaseService):
                 message="Student not found",
                 details=StudentErrorDetails(student_id=student_id),
             )
-        return map_student_to_read(student)
+        return self.mapper.map_student_to_read(student)
 
     async def get_paginated_list(
         self, limit: int, offset: int
     ) -> StudentsPaginatedList:
         students, has_next = await self.repo.get_paginated_list(limit, offset)
-        return map_students_paginated_list(
+        return self.mapper.map_students_paginated_list(
             students,
             has_next=has_next,
             limit=limit,
@@ -146,7 +142,7 @@ class StudentsCoursesService(BaseService):
                     course_data.reestr_number
                 )
                 if course is None:
-                    course = map_course_payload_to_orm(course_data)
+                    course = self.mapper.map_course_payload_to_orm(course_data)
                 else:
                     course.title = course_data.title
 

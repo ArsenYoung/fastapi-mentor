@@ -1,10 +1,5 @@
 from src.exceptions.base import AlreadyExistsException, ObjectNotFoundException
-from src.mappers.authors_books import (
-    map_author_create_to_orm,
-    map_author_to_read,
-    map_authors_paginated_list,
-    map_book_update_to_orm,
-)
+from src.mappers.authors_books import AuthorsBooksMapper
 from src.repositories.author import AuthorRepository
 from src.schemas.authors import (
     Author,
@@ -17,8 +12,9 @@ from src.services.base import BaseService
 
 
 class AuthorsBooksService(BaseService):
-    def __init__(self, repo: AuthorRepository):
+    def __init__(self, repo: AuthorRepository, mapper: AuthorsBooksMapper):
         self.repo = repo
+        self.mapper = mapper
 
     async def create(self, data: AuthorCreate) -> Author:
         existing_author = await self.repo.get(author_code=data.author_code)
@@ -37,9 +33,9 @@ class AuthorsBooksService(BaseService):
                 details=BookErrorDetails(book_code=conflicting_book_code),
             )
 
-        author = await self.repo.create(map_author_create_to_orm(data))
+        author = await self.repo.create(self.mapper.map_author_create_to_orm(data))
         self.logger.info("author_created", author_id=author.id)
-        return map_author_to_read(author)
+        return self.mapper.map_author_to_read(author)
 
     async def get(self, author_id: int) -> Author:
         author = await self.repo.get(id=author_id)
@@ -48,14 +44,14 @@ class AuthorsBooksService(BaseService):
                 message="Author not found",
                 details=AuthorErrorDetails(author_id=author_id),
             )
-        return map_author_to_read(author)
+        return self.mapper.map_author_to_read(author)
 
     async def get_paginated_list(self, limit: int, offset: int) -> AuthorsPaginatedList:
         authors, has_next = await self.repo.get_paginated_list(
             limit,
             offset,
         )
-        return map_authors_paginated_list(
+        return self.mapper.map_authors_paginated_list(
             authors,
             has_next=has_next,
             limit=limit,
@@ -137,7 +133,7 @@ class AuthorsBooksService(BaseService):
             for book_data in books:
                 book = existing_books_by_code.get(book_data.book_code)
                 if book is None:
-                    book = map_book_update_to_orm(book_data)
+                    book = self.mapper.map_book_update_to_orm(book_data)
                     author.books.add(book)
 
                 book.title = book_data.title
