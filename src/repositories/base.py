@@ -13,7 +13,12 @@ class BaseRepository(Generic[ModelT]):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get(self, *, for_update: bool = False, **filters: Any) -> ModelT | None:
+    async def get(
+        self,
+        *,
+        for_update: bool = False,
+        **filters: Any,
+    ) -> ModelT | None:
         stmt = (
             select(self.model)
             .where(self.model.is_deleted.is_(False))

@@ -52,7 +52,7 @@ class PersonsPassportsService(BaseService):
         )
 
     async def delete(self, person_id: int) -> None:
-        person = await self.repo.get(id=person_id, for_update=True)
+        person = await self.repo.get(id=person_id)
         if person is None:
             raise ObjectNotFoundException(
                 message="Person not found",
@@ -66,7 +66,7 @@ class PersonsPassportsService(BaseService):
         )
 
     async def update(self, person_id: int, data: PersonUpdate) -> None:
-        person = await self.repo.get(id=person_id, for_update=True)
+        person = await self.repo.get(id=person_id)
         if person is None:
             raise ObjectNotFoundException(
                 message="Person not found",

@@ -16,9 +16,6 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
         *,
         for_update: bool = False,
     ) -> list[BooksOrm]:
-        if not book_codes:
-            return []
-
         stmt = (
             select(BooksOrm)
             .where(

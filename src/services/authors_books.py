@@ -59,7 +59,7 @@ class AuthorsBooksService(BaseService):
         )
 
     async def delete(self, author_id: int) -> None:
-        author = await self.repo.get(id=author_id, for_update=True)
+        author = await self.repo.get(id=author_id)
         if author is None:
             raise ObjectNotFoundException(
                 message="Author not found",
@@ -75,7 +75,7 @@ class AuthorsBooksService(BaseService):
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update(self, author_id: int, data: AuthorUpdate) -> None:
-        author = await self.repo.get(id=author_id, for_update=True)
+        author = await self.repo.get(id=author_id)
         if author is None:
             raise ObjectNotFoundException(
                 message="Author not found",

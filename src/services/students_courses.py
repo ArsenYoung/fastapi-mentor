@@ -68,7 +68,7 @@ class StudentsCoursesService(BaseService):
         )
 
     async def delete(self, student_id: int) -> None:
-        student = await self.repo.get(id=student_id, for_update=True)
+        student = await self.repo.get(id=student_id)
         if student is None:
             raise ObjectNotFoundException(
                 message="Student not found",
@@ -92,7 +92,7 @@ class StudentsCoursesService(BaseService):
         self.logger.info("student_deleted", student_id=student.id)
 
     async def update(self, student_id: int, data: StudentUpdate) -> None:
-        student = await self.repo.get(id=student_id, for_update=True)
+        student = await self.repo.get(id=student_id)
         if student is None:
             raise ObjectNotFoundException(
                 message="Student not found",

@@ -17,9 +17,6 @@ class StudentRepository(BaseRepository[StudentsOrm]):
         *,
         for_update: bool = False,
     ) -> list[CoursesOrm]:
-        if not reestr_numbers:
-            return []
-
         stmt = (
             select(CoursesOrm)
             .where(
