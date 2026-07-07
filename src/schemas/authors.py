@@ -37,11 +37,13 @@ class AuthorCreate(BaseModel):
     author_code: str = Field(min_length=1, max_length=6)
     first_name: str = Field(min_length=1, max_length=50)
     last_name: str = Field(min_length=1, max_length=50)
-    books: List[BookCreate] = Field(default_factory=list)
+    books: List[BookCreate]
 
     @field_validator("books")
     @classmethod
     def validate_books(cls, books: List[BookCreate]) -> List[BookCreate]:
+        if not books:
+            raise ValueError("At least one book is required")
         validate_unique_book_codes(books)
         return books
 

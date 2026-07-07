@@ -54,6 +54,8 @@ class StudentCreate(BaseModel):
     @field_validator("courses")
     @classmethod
     def validate_courses(cls, courses: List[CourseCreate]) -> List[CourseCreate]:
+        if not courses:
+            raise ValueError("At least one course is required")
         validate_unique_course_reestr_numbers(courses)
         return courses
 
