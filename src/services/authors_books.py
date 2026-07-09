@@ -85,7 +85,7 @@ class AuthorsBooksService(BaseService):
         author_code = data.author_code
         books = data.books
 
-        if author_code is not None:
+        if author_code is not None and author_code != author.author_code:
             existing_author = await self.repo.get(
                 author_code=author_code,
             )
@@ -95,14 +95,18 @@ class AuthorsBooksService(BaseService):
                     details=AuthorErrorDetails(author_code=author_code),
                 )
 
+        author_updates = self.mapper.map_author_update_to_fields(data)
+        for field_name, value in author_updates.items():
+            setattr(author, field_name, value)
+
         if books is not None:
-            current_books = set(author.books)
-            await self.repo.get_books_by_codes(
-                [book.book_code for book in current_books],
-                for_update=True,
+            await self.repo.insert_books_do_nothing(
+                author_id,
+                self.mapper.map_book_updates_to_insert_values(books),
             )
             existing_books = await self.repo.get_books_by_codes(
                 [book.book_code for book in books],
+                for_update=True,
             )
             conflicting_book = next(
                 (book for book in existing_books if book.author_id != author_id),
@@ -116,27 +120,14 @@ class AuthorsBooksService(BaseService):
                         book_code=conflicting_book.book_code,
                     ),
                 )
-
-        author_updates = self.mapper.map_author_update_to_fields(data)
-        for field_name, value in author_updates.items():
-            setattr(author, field_name, value)
-
-        if books is not None:
-            existing_books_by_code = {book.book_code: book for book in author.books}
-            target_codes = {book_data.book_code for book_data in books}
+            existing_books_by_code = {
+                book.book_code: book for book in existing_books
+            }
 
             for book_data in books:
                 book = existing_books_by_code.get(book_data.book_code)
-                if book is None:
-                    book = self.mapper.map_book_update_to_orm(book_data)
-                    author.books.add(book)
-
                 book.title = book_data.title
                 book.is_deleted = False
-
-            for book in author.books:
-                if book.book_code not in target_codes:
-                    book.is_deleted = True
 
         await self.repo.update(author)
         self.logger.info("author_updated", author_id=author.id)

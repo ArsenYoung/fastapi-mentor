@@ -1,6 +1,7 @@
 from typing import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import false, select
+from sqlalchemy.dialects.postgresql import insert
 
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
@@ -9,6 +10,33 @@ from src.repositories.base import BaseRepository
 
 class AuthorRepository(BaseRepository[AuthorsOrm]):
     model = AuthorsOrm
+
+    async def insert_books_do_nothing(
+        self,
+        author_id: int,
+        books: Sequence[tuple[str, str]],
+    ) -> None:
+        if not books:
+            return
+
+        stmt = (
+            insert(BooksOrm)
+            .values(
+                [
+                    {
+                        "author_id": author_id,
+                        "book_code": book_code,
+                        "title": title,
+                    }
+                    for book_code, title in books
+                ]
+            )
+            .on_conflict_do_nothing(
+                index_elements=[BooksOrm.book_code],
+                index_where=BooksOrm.is_deleted == false(),
+            )
+        )
+        await self.session.execute(stmt)
 
     async def get_books_by_codes(
         self,

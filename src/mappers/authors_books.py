@@ -28,6 +28,12 @@ class AuthorsBooksMapper:
             title=data.title,
         )
 
+    def map_book_updates_to_insert_values(
+        self,
+        books: Sequence[AuthorBookUpdateRequest],
+    ) -> list[tuple[str, str]]:
+        return [(book.book_code, book.title) for book in books]
+
     def map_author_create_to_orm(self, data: AuthorCreate) -> AuthorsOrm:
         author = AuthorsOrm(
             author_code=data.author_code,

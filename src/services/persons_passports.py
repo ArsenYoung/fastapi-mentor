@@ -79,32 +79,36 @@ class PersonsPassportsService(BaseService):
             )
 
         passport = data.passport
-        passport_number = passport.number if passport is not None else None
-
-        if passport_number is not None:
-            existing_person = await self.repo.get_person_by_passport_number(
-                passport_number,
-            )
-            if existing_person is not None and existing_person.id != person_id:
-                raise AlreadyExistsException(
-                    message="A person with this passport number already exists",
-                    details=PassportErrorDetails(
-                        passport_number=passport_number,
-                    ),
-                )
 
         person_updates = self.mapper.map_person_update_to_fields(data)
         for field_name, value in person_updates.items():
             setattr(person, field_name, value)
 
         if passport is not None:
-            person_passport = await self.repo.get_passport_by_person_id(
-                person_id,
-                for_update=True,
-            )
             passport_updates = self.mapper.map_passport_update_to_fields(passport)
-            for field_name, value in passport_updates.items():
-                setattr(person_passport, field_name, value)
+            if passport_updates:
+                person_passport = await self.repo.get_passport_by_person_id(
+                    person_id,
+                    for_update=True,
+                )
+                passport_number = passport_updates.get("number")
+                if (
+                    passport_number is not None
+                    and passport_number != person_passport.number
+                ):
+                    existing_person = await self.repo.get_person_by_passport_number(
+                        passport_number,
+                    )
+                    if existing_person is not None and existing_person.id != person_id:
+                        raise AlreadyExistsException(
+                            message="A person with this passport number already exists",
+                            details=PassportErrorDetails(
+                                passport_number=passport_number,
+                            ),
+                        )
+
+                for field_name, value in passport_updates.items():
+                    setattr(person_passport, field_name, value)
 
         await self.repo.update(person)
         self.logger.info(

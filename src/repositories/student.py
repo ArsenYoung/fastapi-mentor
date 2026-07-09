@@ -1,6 +1,7 @@
 from typing import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import false, select
+from sqlalchemy.dialects.postgresql import insert
 
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
@@ -10,6 +11,59 @@ from src.repositories.base import BaseRepository
 
 class StudentRepository(BaseRepository[StudentsOrm]):
     model = StudentsOrm
+
+    async def insert_courses_do_nothing(
+        self,
+        courses: Sequence[tuple[str, str]],
+    ) -> None:
+        if not courses:
+            return
+
+        stmt = (
+            insert(CoursesOrm)
+            .values(
+                [
+                    {
+                        "reestr_number": reestr_number,
+                        "title": title,
+                    }
+                    for reestr_number, title in courses
+                ]
+            )
+            .on_conflict_do_nothing(
+                index_elements=[CoursesOrm.reestr_number],
+                index_where=CoursesOrm.is_deleted == false(),
+            )
+        )
+        await self.session.execute(stmt)
+
+    async def insert_student_course_links_do_nothing(
+        self,
+        student_id: int,
+        course_ids: Sequence[int],
+    ) -> None:
+        if not course_ids:
+            return
+
+        stmt = (
+            insert(StudentsCoursesOrm)
+            .values(
+                [
+                    {
+                        "student_id": student_id,
+                        "course_id": course_id,
+                    }
+                    for course_id in course_ids
+                ]
+            )
+            .on_conflict_do_nothing(
+                index_elements=[
+                    StudentsCoursesOrm.student_id,
+                    StudentsCoursesOrm.course_id,
+                ],
+            )
+        )
+        await self.session.execute(stmt)
 
     async def get_courses_by_reestr_numbers(
         self,
