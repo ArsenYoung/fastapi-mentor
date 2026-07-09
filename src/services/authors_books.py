@@ -24,17 +24,29 @@ class AuthorsBooksService(BaseService):
                 details=AuthorErrorDetails(author_code=data.author_code),
             )
 
-        book_codes = self.mapper.map_book_payloads_to_codes(data.books)
-        existing_books = await self.repo.get_books_by_codes(book_codes)
-        if existing_books:
-            conflicting_book_code = existing_books[0].book_code
+        author = await self.repo.create(self.mapper.map_author_create_to_orm(data))
+        await self.repo.insert_books_do_nothing(
+            author.id,
+            self.mapper.map_book_create_to_insert_values(data.books),
+        )
+        existing_books = await self.repo.get_books_by_codes(
+            self.mapper.map_book_payloads_to_codes(data.books),
+            for_update=True,
+        )
+        conflicting_book = next(
+            (book for book in existing_books if book.author_id != author.id),
+            None,
+        )
+
+        if conflicting_book is not None:
             raise AlreadyExistsException(
                 message="A book with this code already exists",
-                details=BookErrorDetails(book_code=conflicting_book_code),
+                details=BookErrorDetails(book_code=conflicting_book.book_code),
             )
 
-        author = await self.repo.create(self.mapper.map_author_create_to_orm(data))
-        self.logger.info("author_created", author_id=author.id)
+        for book in existing_books:
+            author.books.add(book)
+
         return self.mapper.map_author_to_read(author)
 
     async def get(self, author_id: int) -> Author:

@@ -9,7 +9,7 @@ from src.schemas.authors import (
     AuthorUpdate,
     AuthorsPaginatedList,
 )
-from src.schemas.books import Book
+from src.schemas.books import Book, BookCreate
 
 
 class AuthorsBooksMapper:
@@ -33,9 +33,15 @@ class AuthorsBooksMapper:
     ) -> list[tuple[str, str]]:
         return [(book.book_code, book.title) for book in books]
 
+    def map_book_create_to_insert_values(
+        self,
+        books: Sequence[BookCreate],
+    ) -> list[tuple[str, str]]:
+        return [(book.book_code, book.title) for book in books]
+
     def map_book_payloads_to_codes(
         self,
-        books: Sequence[AuthorBookUpdateRequest],
+        books: Sequence[BookCreate | AuthorBookUpdateRequest],
     ) -> list[str]:
         return [book.book_code for book in books]
 
@@ -46,19 +52,11 @@ class AuthorsBooksMapper:
         return [book.book_code for book in books]
 
     def map_author_create_to_orm(self, data: AuthorCreate) -> AuthorsOrm:
-        author = AuthorsOrm(
+        return AuthorsOrm(
             author_code=data.author_code,
             first_name=data.first_name,
             last_name=data.last_name,
         )
-        for book in data.books:
-            author.books.add(
-                BooksOrm(
-                    book_code=book.book_code,
-                    title=book.title,
-                )
-            )
-        return author
 
     def map_book_to_read(self, book: BooksOrm) -> Book:
         return Book(

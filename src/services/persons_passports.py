@@ -26,11 +26,6 @@ class PersonsPassportsService(BaseService):
         person = await self.repo.create(
             self.mapper.map_person_create_to_orm(data),
         )
-        self.logger.info(
-            "person_created",
-            person_id=person.id,
-            passport_id=person.passport.id,
-        )
         return self.mapper.map_person_to_read(person)
 
     async def get(self, person_id: int) -> Person:

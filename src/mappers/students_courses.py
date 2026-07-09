@@ -37,6 +37,12 @@ class StudentCoursesMapper:
             title=data.title,
         )
 
+    def map_course_create_to_insert_values(
+        self,
+        courses: Sequence[CourseCreate],
+    ) -> list[tuple[str, str]]:
+        return [(course.reestr_number, course.title) for course in courses]
+
     def map_course_updates_to_insert_values(
         self,
         courses: Sequence[StudentCourseUpdateRequest],

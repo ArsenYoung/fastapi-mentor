@@ -29,23 +29,22 @@ class StudentsCoursesService(BaseService):
             )
 
         student = self.mapper.map_student_create_to_orm(data)
+        await self.repo.insert_courses_do_nothing(
+            self.mapper.map_course_create_to_insert_values(data.courses),
+        )
+        existing_courses = await self.repo.get_courses_by_reestr_numbers(
+            self.mapper.map_course_payloads_to_reestr_numbers(data.courses),
+            for_update=True,
+        )
         existing_courses_by_reestr_number = {
-            course.reestr_number: course
-            for course in await self.repo.get_courses_by_reestr_numbers(
-                self.mapper.map_course_payloads_to_reestr_numbers(data.courses),
-                for_update=True,
-            )
+            course.reestr_number: course for course in existing_courses
         }
         for course_data in data.courses:
             course = existing_courses_by_reestr_number.get(course_data.reestr_number)
-            if course is None:
-                course = self.mapper.map_course_payload_to_orm(course_data)
-
             course.title = course_data.title
             student.courses.add(course)
 
         student = await self.repo.create(student)
-        self.logger.info("student_created", student_id=student.id)
         return self.mapper.map_student_to_read(student)
 
     async def get(self, student_id: int) -> Student:
