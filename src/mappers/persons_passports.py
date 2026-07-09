@@ -1,12 +1,35 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
 from src.schemas.passports import Passport
-from src.schemas.persons import Person, PersonCreate, PersonsPaginatedList
+from src.schemas.passports import PassportUpdate
+from src.schemas.persons import (
+    Person,
+    PersonCreate,
+    PersonsPaginatedList,
+    PersonUpdate,
+)
 
 
 class PersonsPassportsMapper:
+    def map_person_update_to_fields(
+        self,
+        data: PersonUpdate,
+    ) -> dict[str, Any]:
+        return data.model_dump(
+            exclude_none=True,
+            exclude={"passport"},
+        )
+
+    def map_passport_update_to_fields(
+        self,
+        data: PassportUpdate,
+    ) -> dict[str, Any]:
+        return data.model_dump(
+            exclude_none=True,
+        )
+
     def map_person_create_to_orm(self, data: PersonCreate) -> PersonsOrm:
         return PersonsOrm(
             first_name=data.first_name,

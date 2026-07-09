@@ -117,12 +117,9 @@ class AuthorsBooksService(BaseService):
                     ),
                 )
 
-        if data.author_code is not None:
-            author.author_code = data.author_code
-        if data.first_name is not None:
-            author.first_name = data.first_name
-        if data.last_name is not None:
-            author.last_name = data.last_name
+        author_updates = self.mapper.map_author_update_to_fields(data)
+        for field_name, value in author_updates.items():
+            setattr(author, field_name, value)
 
         if books is not None:
             existing_books_by_code = {book.book_code: book for book in author.books}

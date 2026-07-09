@@ -115,27 +115,29 @@ class StudentsCoursesService(BaseService):
                     ),
                 )
 
-        if data.record_book_number is not None:
-            student.record_book_number = data.record_book_number
-        if data.first_name is not None:
-            student.first_name = data.first_name
-        if data.last_name is not None:
-            student.last_name = data.last_name
+        student_updates = self.mapper.map_student_update_to_fields(data)
+        for field_name, value in student_updates.items():
+            setattr(student, field_name, value)
 
         if courses is not None:
-            previous_courses = set(student.courses)
-            await self.repo.get_courses_by_reestr_numbers(
-                [course.reestr_number for course in previous_courses],
-                for_update=True,
+            current_courses_by_reestr_number = {
+                course.reestr_number: course for course in student.courses
+            }
+            target_courses_by_reestr_number = {
+                course.reestr_number: course for course in courses
+            }
+            course_reestr_numbers = (
+                current_courses_by_reestr_number.keys()
+                | target_courses_by_reestr_number.keys()
             )
             existing_courses = await self.repo.get_courses_by_reestr_numbers(
-                [course.reestr_number for course in courses],
+                list(course_reestr_numbers),
                 for_update=True,
             )
             existing_courses_by_reestr_number = {
                 course.reestr_number: course for course in existing_courses
             }
-            student.courses.clear()
+            next_courses = set()
 
             for course_data in courses:
                 course = existing_courses_by_reestr_number.get(
@@ -143,12 +145,20 @@ class StudentsCoursesService(BaseService):
                 )
                 if course is None:
                     course = self.mapper.map_course_payload_to_orm(course_data)
-                else:
-                    course.title = course_data.title
+                course.title = course_data.title
+                next_courses.add(course)
 
+            current_courses = set(current_courses_by_reestr_number.values())
+            courses_to_remove = current_courses - next_courses
+            courses_to_add = next_courses - current_courses
+
+            for course in courses_to_remove:
+                student.courses.remove(course)
+
+            for course in courses_to_add:
                 student.courses.add(course)
 
-            detached_courses = previous_courses - student.courses
+            detached_courses = courses_to_remove
             active_course_ids = await self.repo.get_course_ids_with_active_students(
                 detached_courses,
             )

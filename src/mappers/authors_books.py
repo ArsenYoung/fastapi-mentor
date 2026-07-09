@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
@@ -6,12 +6,22 @@ from src.schemas.authors import (
     Author,
     AuthorBookUpdateRequest,
     AuthorCreate,
+    AuthorUpdate,
     AuthorsPaginatedList,
 )
 from src.schemas.books import Book
 
 
 class AuthorsBooksMapper:
+    def map_author_update_to_fields(
+        self,
+        data: AuthorUpdate,
+    ) -> dict[str, Any]:
+        return data.model_dump(
+            exclude_none=True,
+            exclude={"books"},
+        )
+
     def map_book_update_to_orm(self, data: AuthorBookUpdateRequest) -> BooksOrm:
         return BooksOrm(
             book_code=data.book_code,

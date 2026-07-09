@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
@@ -7,6 +7,7 @@ from src.schemas.students import (
     Student,
     StudentCourseUpdateRequest,
     StudentCreate,
+    StudentUpdate,
     StudentsPaginatedList,
 )
 
@@ -17,6 +18,15 @@ class StudentCoursesMapper:
             first_name=data.first_name,
             last_name=data.last_name,
             record_book_number=data.record_book_number,
+        )
+
+    def map_student_update_to_fields(
+        self,
+        data: StudentUpdate,
+    ) -> dict[str, Any]:
+        return data.model_dump(
+            exclude_none=True,
+            exclude={"courses"},
         )
 
     def map_course_payload_to_orm(

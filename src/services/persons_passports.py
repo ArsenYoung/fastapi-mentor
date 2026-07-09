@@ -93,20 +93,18 @@ class PersonsPassportsService(BaseService):
                     ),
                 )
 
-        if data.first_name is not None:
-            person.first_name = data.first_name
-        if data.last_name is not None:
-            person.last_name = data.last_name
+        person_updates = self.mapper.map_person_update_to_fields(data)
+        for field_name, value in person_updates.items():
+            setattr(person, field_name, value)
 
         if passport is not None:
             person_passport = await self.repo.get_passport_by_person_id(
                 person_id,
                 for_update=True,
             )
-            if passport.number is not None:
-                person_passport.number = passport.number
-            if passport.registrated_in is not None:
-                person_passport.registrated_in = passport.registrated_in
+            passport_updates = self.mapper.map_passport_update_to_fields(passport)
+            for field_name, value in passport_updates.items():
+                setattr(person_passport, field_name, value)
 
         await self.repo.update(person)
         self.logger.info(
