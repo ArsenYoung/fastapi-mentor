@@ -75,9 +75,8 @@ class StudentsCoursesService(BaseService):
                 details=StudentErrorDetails(student_id=student_id),
             )
         detached_courses = set(student.courses)
-        await self.repo.get_courses_by_reestr_numbers(
-            self.mapper.map_courses_to_reestr_numbers(list(detached_courses)),
-            for_update=True,
+        await self.repo.lock_courses_by_ids(
+            self.mapper.map_courses_to_ids(list(detached_courses)),
         )
         student.courses.clear()
         await self.repo.delete(student)

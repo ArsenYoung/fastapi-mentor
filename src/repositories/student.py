@@ -84,6 +84,17 @@ class StudentRepository(BaseRepository[StudentsOrm]):
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
 
+    async def lock_courses_by_ids(self, course_ids: Sequence[int]) -> None:
+        if not course_ids:
+            return
+
+        stmt = (
+            select(CoursesOrm.id)
+            .where(CoursesOrm.id.in_(course_ids))
+            .with_for_update()
+        )
+        await self.session.execute(stmt)
+
     async def get_course_ids_with_active_students(
         self,
         courses: set[CoursesOrm],

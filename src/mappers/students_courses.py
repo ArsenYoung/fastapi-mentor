@@ -56,12 +56,6 @@ class StudentCoursesMapper:
     ) -> list[str]:
         return [course.reestr_number for course in courses]
 
-    def map_courses_to_reestr_numbers(
-        self,
-        courses: Sequence[CoursesOrm],
-    ) -> list[str]:
-        return [course.reestr_number for course in courses]
-
     def map_courses_to_ids(
         self,
         courses: Sequence[CoursesOrm],
