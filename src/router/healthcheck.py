@@ -5,6 +5,6 @@ from fastapi import APIRouter
 router = APIRouter()
 
 
-@router.get("/healthcheck")
+@router.get('/healthcheck')
 async def healthcheck() -> Dict[str, str]:
-    return {"status": "ok"}
+    return {'status': 'ok'}

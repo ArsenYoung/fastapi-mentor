@@ -32,7 +32,8 @@ class StudentsCoursesService(BaseService):
         existing_courses_by_reestr_number = {
             course.reestr_number: course
             for course in await self.repo.get_courses_by_reestr_numbers(
-                [course.reestr_number for course in data.courses]
+                [course.reestr_number for course in data.courses],
+                for_update=True,
             )
         }
         for course_data in data.courses:
@@ -68,7 +69,7 @@ class StudentsCoursesService(BaseService):
         )
 
     async def delete(self, student_id: int) -> None:
-        student = await self.repo.get(id=student_id)
+        student = await self.repo.get(id=student_id, for_update=True)
         if student is None:
             raise ObjectNotFoundException(
                 message="Student not found",
@@ -92,7 +93,7 @@ class StudentsCoursesService(BaseService):
         self.logger.info("student_deleted", student_id=student.id)
 
     async def update(self, student_id: int, data: StudentUpdate) -> None:
-        student = await self.repo.get(id=student_id)
+        student = await self.repo.get(id=student_id, for_update=True)
         if student is None:
             raise ObjectNotFoundException(
                 message="Student not found",
@@ -105,7 +106,6 @@ class StudentsCoursesService(BaseService):
         if record_book_number is not None:
             existing_student = await self.repo.get(
                 record_book_number=record_book_number,
-                for_update=True,
             )
             if existing_student is not None and existing_student.id != student_id:
                 raise AlreadyExistsException(

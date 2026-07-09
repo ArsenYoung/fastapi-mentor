@@ -59,7 +59,7 @@ class AuthorsBooksService(BaseService):
         )
 
     async def delete(self, author_id: int) -> None:
-        author = await self.repo.get(id=author_id)
+        author = await self.repo.get(id=author_id, for_update=True)
         if author is None:
             raise ObjectNotFoundException(
                 message="Author not found",
@@ -75,7 +75,7 @@ class AuthorsBooksService(BaseService):
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update(self, author_id: int, data: AuthorUpdate) -> None:
-        author = await self.repo.get(id=author_id)
+        author = await self.repo.get(id=author_id, for_update=True)
         if author is None:
             raise ObjectNotFoundException(
                 message="Author not found",
@@ -88,7 +88,6 @@ class AuthorsBooksService(BaseService):
         if author_code is not None:
             existing_author = await self.repo.get(
                 author_code=author_code,
-                for_update=True,
             )
             if existing_author is not None and existing_author.id != author_id:
                 raise AlreadyExistsException(
@@ -104,7 +103,6 @@ class AuthorsBooksService(BaseService):
             )
             existing_books = await self.repo.get_books_by_codes(
                 [book.book_code for book in books],
-                for_update=True,
             )
             conflicting_book = next(
                 (book for book in existing_books if book.author_id != author_id),

@@ -15,8 +15,6 @@ class BaseRepository(Generic[ModelT]):
 
     async def get(
         self,
-        *,
-        for_update: bool = False,
         **filters: Any,
     ) -> ModelT | None:
         stmt = (
@@ -24,8 +22,6 @@ class BaseRepository(Generic[ModelT]):
             .where(self.model.is_deleted.is_(False))
             .filter_by(**filters)
         )
-        if for_update:
-            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
 

@@ -27,3 +27,18 @@ class PersonRepository(BaseRepository[PersonsOrm]):
             stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
+
+    async def get_passport_by_person_id(
+        self,
+        person_id: int,
+        *,
+        for_update: bool = False,
+    ) -> PassportsOrm | None:
+        stmt = select(PassportsOrm).where(
+            PassportsOrm.is_deleted.is_(False),
+            PassportsOrm.person_id == person_id,
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()

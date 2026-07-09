@@ -52,13 +52,18 @@ class PersonsPassportsService(BaseService):
         )
 
     async def delete(self, person_id: int) -> None:
-        person = await self.repo.get(id=person_id)
+        person = await self.repo.get(id=person_id, for_update=True)
         if person is None:
             raise ObjectNotFoundException(
                 message="Person not found",
                 details=PersonErrorDetails(person_id=person_id),
             )
-        person.passport.is_deleted = True
+        passport = await self.repo.get_passport_by_person_id(
+            person_id,
+            for_update=True,
+        )
+        if passport is not None:
+            passport.is_deleted = True
         await self.repo.delete(person)
         self.logger.info(
             "person_deleted",
@@ -66,7 +71,7 @@ class PersonsPassportsService(BaseService):
         )
 
     async def update(self, person_id: int, data: PersonUpdate) -> None:
-        person = await self.repo.get(id=person_id)
+        person = await self.repo.get(id=person_id, for_update=True)
         if person is None:
             raise ObjectNotFoundException(
                 message="Person not found",
@@ -79,7 +84,6 @@ class PersonsPassportsService(BaseService):
         if passport_number is not None:
             existing_person = await self.repo.get_person_by_passport_number(
                 passport_number,
-                for_update=True,
             )
             if existing_person is not None and existing_person.id != person_id:
                 raise AlreadyExistsException(
@@ -95,10 +99,14 @@ class PersonsPassportsService(BaseService):
             person.last_name = data.last_name
 
         if passport is not None:
+            person_passport = await self.repo.get_passport_by_person_id(
+                person_id,
+                for_update=True,
+            )
             if passport.number is not None:
-                person.passport.number = passport.number
+                person_passport.number = passport.number
             if passport.registrated_in is not None:
-                person.passport.registrated_in = passport.registrated_in
+                person_passport.registrated_in = passport.registrated_in
 
         await self.repo.update(person)
         self.logger.info(
