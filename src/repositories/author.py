@@ -41,8 +41,6 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
     async def get_books_by_codes(
         self,
         book_codes: Sequence[str],
-        *,
-        for_update: bool = False,
     ) -> list[BooksOrm]:
         stmt = (
             select(BooksOrm)
@@ -52,7 +50,5 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
             )
             .order_by(BooksOrm.book_code)
         )
-        if for_update:
-            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
