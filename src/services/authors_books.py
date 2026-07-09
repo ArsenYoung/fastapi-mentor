@@ -24,7 +24,7 @@ class AuthorsBooksService(BaseService):
                 details=AuthorErrorDetails(author_code=data.author_code),
             )
 
-        book_codes = [book.book_code for book in data.books]
+        book_codes = self.mapper.map_book_payloads_to_codes(data.books)
         existing_books = await self.repo.get_books_by_codes(book_codes)
         if existing_books:
             conflicting_book_code = existing_books[0].book_code
@@ -66,7 +66,7 @@ class AuthorsBooksService(BaseService):
                 details=AuthorErrorDetails(author_id=author_id),
             )
         await self.repo.get_books_by_codes(
-            [book.book_code for book in author.books],
+            self.mapper.map_books_to_codes(list(author.books)),
             for_update=True,
         )
         for book in author.books:
@@ -97,7 +97,8 @@ class AuthorsBooksService(BaseService):
 
         author_updates = self.mapper.map_author_update_to_fields(data)
         for field_name, value in author_updates.items():
-            setattr(author, field_name, value)
+            if value is not None:
+                setattr(author, field_name, value)
 
         if books is not None:
             await self.repo.insert_books_do_nothing(
@@ -105,7 +106,7 @@ class AuthorsBooksService(BaseService):
                 self.mapper.map_book_updates_to_insert_values(books),
             )
             existing_books = await self.repo.get_books_by_codes(
-                [book.book_code for book in books],
+                self.mapper.map_book_payloads_to_codes(books),
                 for_update=True,
             )
             conflicting_book = next(

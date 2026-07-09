@@ -25,7 +25,6 @@ class StudentCoursesMapper:
         data: StudentUpdate,
     ) -> dict[str, Any]:
         return data.model_dump(
-            exclude_none=True,
             exclude={"courses"},
         )
 
@@ -43,6 +42,24 @@ class StudentCoursesMapper:
         courses: Sequence[StudentCourseUpdateRequest],
     ) -> list[tuple[str, str]]:
         return [(course.reestr_number, course.title) for course in courses]
+
+    def map_course_payloads_to_reestr_numbers(
+        self,
+        courses: Sequence[CourseCreate | StudentCourseUpdateRequest],
+    ) -> list[str]:
+        return [course.reestr_number for course in courses]
+
+    def map_courses_to_reestr_numbers(
+        self,
+        courses: Sequence[CoursesOrm],
+    ) -> list[str]:
+        return [course.reestr_number for course in courses]
+
+    def map_courses_to_ids(
+        self,
+        courses: Sequence[CoursesOrm],
+    ) -> list[int]:
+        return [course.id for course in courses if course.id is not None]
 
     def map_course_to_read(self, course: CoursesOrm) -> Course:
         return Course(

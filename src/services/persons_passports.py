@@ -82,11 +82,12 @@ class PersonsPassportsService(BaseService):
 
         person_updates = self.mapper.map_person_update_to_fields(data)
         for field_name, value in person_updates.items():
-            setattr(person, field_name, value)
+            if value is not None:
+                setattr(person, field_name, value)
 
         if passport is not None:
             passport_updates = self.mapper.map_passport_update_to_fields(passport)
-            if passport_updates:
+            if any(value is not None for value in passport_updates.values()):
                 person_passport = await self.repo.get_passport_by_person_id(
                     person_id,
                     for_update=True,
@@ -108,7 +109,8 @@ class PersonsPassportsService(BaseService):
                         )
 
                 for field_name, value in passport_updates.items():
-                    setattr(person_passport, field_name, value)
+                    if value is not None:
+                        setattr(person_passport, field_name, value)
 
         await self.repo.update(person)
         self.logger.info(

@@ -18,7 +18,6 @@ class AuthorsBooksMapper:
         data: AuthorUpdate,
     ) -> dict[str, Any]:
         return data.model_dump(
-            exclude_none=True,
             exclude={"books"},
         )
 
@@ -33,6 +32,18 @@ class AuthorsBooksMapper:
         books: Sequence[AuthorBookUpdateRequest],
     ) -> list[tuple[str, str]]:
         return [(book.book_code, book.title) for book in books]
+
+    def map_book_payloads_to_codes(
+        self,
+        books: Sequence[AuthorBookUpdateRequest],
+    ) -> list[str]:
+        return [book.book_code for book in books]
+
+    def map_books_to_codes(
+        self,
+        books: Sequence[BooksOrm],
+    ) -> list[str]:
+        return [book.book_code for book in books]
 
     def map_author_create_to_orm(self, data: AuthorCreate) -> AuthorsOrm:
         author = AuthorsOrm(
