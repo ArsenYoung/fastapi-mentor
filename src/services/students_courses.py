@@ -29,18 +29,18 @@ class StudentsCoursesService(BaseService):
             )
 
         student = self.mapper.map_student_create_to_orm(data)
-        await self.repo.insert_courses_do_nothing(
+        await self.repo.create_courses_do_nothing(
             self.mapper.map_course_create_to_insert_values(data.courses),
         )
-        existing_courses = await self.repo.get_courses_by_reestr_numbers(
+        courses_from_db = await self.repo.get_courses_by_reestr_numbers(
             self.mapper.map_course_payloads_to_reestr_numbers(data.courses),
             for_update=True,
         )
-        existing_courses_by_reestr_number = {
-            course.reestr_number: course for course in existing_courses
+        courses_from_db_by_reestr_number = {
+            course.reestr_number: course for course in courses_from_db
         }
         for course_data in data.courses:
-            course = existing_courses_by_reestr_number.get(course_data.reestr_number)
+            course = courses_from_db_by_reestr_number.get(course_data.reestr_number)
             course.title = course_data.title
             student.courses.add(course)
 
@@ -119,30 +119,29 @@ class StudentsCoursesService(BaseService):
 
         student_updates = self.mapper.map_student_update_to_fields(data)
         for field_name, value in student_updates.items():
-            if value is not None:
-                setattr(student, field_name, value)
+            setattr(student, field_name, value)
 
         if courses is not None:
-            await self.repo.insert_courses_do_nothing(
+            await self.repo.create_courses_do_nothing(
                 self.mapper.map_course_updates_to_insert_values(courses),
             )
-            existing_courses = await self.repo.get_courses_by_reestr_numbers(
+            courses_from_db = await self.repo.get_courses_by_reestr_numbers(
                 self.mapper.map_course_payloads_to_reestr_numbers(courses),
                 for_update=True,
             )
-            existing_courses_by_reestr_number = {
-                course.reestr_number: course for course in existing_courses
+            courses_from_db_by_reestr_number = {
+                course.reestr_number: course for course in courses_from_db
             }
 
             for course_data in courses:
-                course = existing_courses_by_reestr_number.get(
+                course = courses_from_db_by_reestr_number.get(
                     course_data.reestr_number
                 )
                 course.title = course_data.title
 
-            await self.repo.insert_student_course_links_do_nothing(
+            await self.repo.create_student_course_links_do_nothing(
                 student_id,
-                self.mapper.map_courses_to_ids(existing_courses),
+                self.mapper.map_courses_to_ids(courses_from_db),
             )
 
         await self.repo.update(student)

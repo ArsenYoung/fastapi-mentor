@@ -12,7 +12,7 @@ from src.repositories.base import BaseRepository
 class StudentRepository(BaseRepository[StudentsOrm]):
     model = StudentsOrm
 
-    async def insert_courses_do_nothing(
+    async def create_courses_do_nothing(
         self,
         courses: Sequence[tuple[str, str]],
     ) -> None:
@@ -37,7 +37,7 @@ class StudentRepository(BaseRepository[StudentsOrm]):
         )
         await self.session.execute(stmt)
 
-    async def insert_student_course_links_do_nothing(
+    async def create_student_course_links_do_nothing(
         self,
         student_id: int,
         course_ids: Sequence[int],

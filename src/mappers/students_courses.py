@@ -25,6 +25,7 @@ class StudentCoursesMapper:
         data: StudentUpdate,
     ) -> dict[str, Any]:
         return data.model_dump(
+            exclude_none=True,
             exclude={"courses"},
         )
 

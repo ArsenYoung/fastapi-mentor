@@ -11,7 +11,7 @@ from src.repositories.base import BaseRepository
 class AuthorRepository(BaseRepository[AuthorsOrm]):
     model = AuthorsOrm
 
-    async def insert_books_do_nothing(
+    async def create_books_do_nothing(
         self,
         author_id: int,
         books: Sequence[tuple[str, str]],

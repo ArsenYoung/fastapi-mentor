@@ -25,16 +25,16 @@ class AuthorsBooksService(BaseService):
             )
 
         author = await self.repo.create(self.mapper.map_author_create_to_orm(data))
-        await self.repo.insert_books_do_nothing(
+        await self.repo.create_books_do_nothing(
             author.id,
             self.mapper.map_book_create_to_insert_values(data.books),
         )
-        existing_books = await self.repo.get_books_by_codes(
+        books_from_db = await self.repo.get_books_by_codes(
             self.mapper.map_book_payloads_to_codes(data.books),
             for_update=True,
         )
         conflicting_book = next(
-            (book for book in existing_books if book.author_id != author.id),
+            (book for book in books_from_db if book.author_id != author.id),
             None,
         )
 
@@ -44,7 +44,7 @@ class AuthorsBooksService(BaseService):
                 details=BookErrorDetails(book_code=conflicting_book.book_code),
             )
 
-        for book in existing_books:
+        for book in books_from_db:
             author.books.add(book)
 
         return self.mapper.map_author_to_read(author)
@@ -109,20 +109,19 @@ class AuthorsBooksService(BaseService):
 
         author_updates = self.mapper.map_author_update_to_fields(data)
         for field_name, value in author_updates.items():
-            if value is not None:
-                setattr(author, field_name, value)
+            setattr(author, field_name, value)
 
         if books is not None:
-            await self.repo.insert_books_do_nothing(
+            await self.repo.create_books_do_nothing(
                 author_id,
                 self.mapper.map_book_updates_to_insert_values(books),
             )
-            existing_books = await self.repo.get_books_by_codes(
+            books_from_db = await self.repo.get_books_by_codes(
                 self.mapper.map_book_payloads_to_codes(books),
                 for_update=True,
             )
             conflicting_book = next(
-                (book for book in existing_books if book.author_id != author_id),
+                (book for book in books_from_db if book.author_id != author_id),
                 None,
             )
 
@@ -133,12 +132,12 @@ class AuthorsBooksService(BaseService):
                         book_code=conflicting_book.book_code,
                     ),
                 )
-            existing_books_by_code = {
-                book.book_code: book for book in existing_books
+            books_from_db_by_code = {
+                book.book_code: book for book in books_from_db
             }
 
             for book_data in books:
-                book = existing_books_by_code.get(book_data.book_code)
+                book = books_from_db_by_code.get(book_data.book_code)
                 book.title = book_data.title
                 book.is_deleted = False
 

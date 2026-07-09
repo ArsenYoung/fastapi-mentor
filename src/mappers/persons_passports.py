@@ -18,6 +18,7 @@ class PersonsPassportsMapper:
         data: PersonUpdate,
     ) -> dict[str, Any]:
         return data.model_dump(
+            exclude_none=True,
             exclude={"passport"},
         )
 
@@ -25,7 +26,7 @@ class PersonsPassportsMapper:
         self,
         data: PassportUpdate,
     ) -> dict[str, Any]:
-        return data.model_dump()
+        return data.model_dump(exclude_none=True)
 
     def map_person_create_to_orm(self, data: PersonCreate) -> PersonsOrm:
         return PersonsOrm(

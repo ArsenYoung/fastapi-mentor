@@ -18,6 +18,7 @@ class AuthorsBooksMapper:
         data: AuthorUpdate,
     ) -> dict[str, Any]:
         return data.model_dump(
+            exclude_none=True,
             exclude={"books"},
         )
 
