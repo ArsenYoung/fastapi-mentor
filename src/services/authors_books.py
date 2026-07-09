@@ -31,7 +31,6 @@ class AuthorsBooksService(BaseService):
         )
         books_from_db = await self.repo.get_books_by_codes(
             self.mapper.map_book_payloads_to_codes(data.books),
-            for_update=True,
         )
         conflicting_book = next(
             (book for book in books_from_db if book.author_id != author.id),
@@ -79,7 +78,6 @@ class AuthorsBooksService(BaseService):
             )
         await self.repo.get_books_by_codes(
             self.mapper.map_books_to_codes(list(author.books)),
-            for_update=True,
         )
         for book in author.books:
             book.is_deleted = True
@@ -118,7 +116,6 @@ class AuthorsBooksService(BaseService):
             )
             books_from_db = await self.repo.get_books_by_codes(
                 self.mapper.map_book_payloads_to_codes(books),
-                for_update=True,
             )
             conflicting_book = next(
                 (book for book in books_from_db if book.author_id != author_id),
