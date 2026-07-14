@@ -59,3 +59,22 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
         )
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
+
+    async def get_books_by_author_id(
+        self,
+        author_id: int,
+        *,
+        for_update: bool = False,
+    ) -> list[BooksOrm]:
+        stmt = (
+            select(BooksOrm)
+            .where(
+                BooksOrm.is_deleted.is_(False),
+                BooksOrm.author_id == author_id,
+            )
+            .order_by(BooksOrm.id)
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        result = await self.session.execute(stmt)
+        return list(result.unique().scalars().all())

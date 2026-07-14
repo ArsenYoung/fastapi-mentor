@@ -72,10 +72,11 @@ class AuthorsBooksService(BaseService):
                 message="Author not found",
                 details=AuthorErrorDetails(author_id=author_id),
             )
-        await self.repo.get_books_by_codes(
-            self.mapper.map_books_to_codes(list(author.books)),
+        books = await self.repo.get_books_by_author_id(
+            author_id,
+            for_update=True,
         )
-        for book in author.books:
+        for book in books:
             book.is_deleted = True
         await self.repo.delete(author)
         self.logger.info("author_deleted", author_id=author.id)
