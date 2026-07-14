@@ -31,17 +31,18 @@ class AuthorsBooksService(BaseService):
             author.id,
             data.books,
         )
-        await self.repo.create_books_do_nothing(book_values)
-        books_with_requested_codes = await self.repo.get_books_by_codes(book_codes)
+        created_books = await self.repo.create_books_do_nothing(book_values)
 
-        for book in books_with_requested_codes:
-            if book.author_id != author.id:
-                raise AlreadyExistsException(
-                    message="A book with this code already exists",
-                    details=BookErrorDetails(book_code=book.book_code),
-                )
+        if len(created_books) != len(book_values):
+            created_book_codes = set(self.mapper.map_books_to_codes(created_books))
+            for book_code in book_codes:
+                if book_code not in created_book_codes:
+                    raise AlreadyExistsException(
+                        message="A book with this code already exists",
+                        details=BookErrorDetails(book_code=book_code),
+                    )
 
-        author.books.update(books_with_requested_codes)
+        author.books.update(created_books)
         return self.mapper.map_author_to_read(author)
 
     async def get(self, author_id: int) -> Author:
@@ -105,32 +106,34 @@ class AuthorsBooksService(BaseService):
         self.mapper.apply_author_update_to_orm(data, author)
 
         if books is not None:
-            await self.repo.create_books_do_nothing(
-                self.mapper.map_book_updates_to_insert_values(author_id, books),
+            book_codes = self.mapper.map_book_payloads_to_codes(books)
+            books_with_requested_codes = await self.repo.get_books_by_codes(
+                book_codes,
+                for_update=True,
             )
-            books_from_db = await self.repo.get_books_by_codes(
-                self.mapper.map_book_payloads_to_codes(books),
-            )
-            conflicting_book = next(
-                (book for book in books_from_db if book.author_id != author_id),
-                None,
-            )
-
-            if conflicting_book is not None:
-                raise AlreadyExistsException(
-                    message="A book with this code already exists",
-                    details=BookErrorDetails(
-                        book_code=conflicting_book.book_code,
-                    ),
-                )
-            books_from_db_by_code = {
-                book.book_code: book for book in books_from_db
+            found_book_codes = {
+                book.book_code for book in books_with_requested_codes
             }
 
-            for book_data in books:
-                book = books_from_db_by_code.get(book_data.book_code)
-                book.title = book_data.title
-                book.is_deleted = False
+            for book_code in book_codes:
+                if book_code not in found_book_codes:
+                    raise ObjectNotFoundException(
+                        message="Book not found",
+                        details=BookErrorDetails(book_code=book_code),
+                    )
+
+            for book in books_with_requested_codes:
+                if book.author_id != author_id:
+                    raise AlreadyExistsException(
+                        message="A book with this code already exists",
+                        details=BookErrorDetails(
+                            book_code=book.book_code,
+                        ),
+                    )
+            self.mapper.apply_book_updates_to_orms(
+                books,
+                books_with_requested_codes,
+            )
 
         await self.repo.update(author)
         self.logger.info("author_updated", author_id=author.id)

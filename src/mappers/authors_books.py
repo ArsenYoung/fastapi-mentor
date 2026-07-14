@@ -56,6 +56,16 @@ class AuthorsBooksMapper:
             for book in books
         ]
 
+    def apply_book_updates_to_orms(
+        self,
+        data: Sequence[AuthorBookUpdateRequest],
+        books: Sequence[BooksOrm],
+    ) -> None:
+        books_by_code = {book.book_code: book for book in books}
+        for book_data in data:
+            book = books_by_code[book_data.book_code]
+            book.title = book_data.title
+
     def map_book_creates_to_insert_values(
         self,
         author_id: int,

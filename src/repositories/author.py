@@ -1,4 +1,3 @@
-from pickletools import int4
 from typing import Any, Sequence
 
 from sqlalchemy import false, select
@@ -31,9 +30,9 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
     async def create_books_do_nothing(
         self,
         values: Sequence[dict[str, Any]],
-    ) -> None:
+    ) -> list[BooksOrm]:
         if not values:
-            return
+            return []
 
         stmt = (
             insert(BooksOrm)
@@ -42,12 +41,16 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
                 index_elements=[BooksOrm.book_code],
                 index_where=BooksOrm.is_deleted == false(),
             )
+            .returning(BooksOrm)
         )
-        await self.session.execute(stmt)
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
     async def get_books_by_codes(
         self,
         book_codes: Sequence[str],
+        *,
+        for_update: bool = False,
     ) -> list[BooksOrm]:
         stmt = (
             select(BooksOrm)
@@ -57,6 +60,8 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
             )
             .order_by(BooksOrm.book_code)
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
 
