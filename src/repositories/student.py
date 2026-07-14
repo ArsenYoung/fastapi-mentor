@@ -23,12 +23,10 @@ class StudentRepository(BaseRepository[StudentsOrm]):
                 index_elements=[StudentsOrm.record_book_number],
                 index_where=StudentsOrm.is_deleted == false(),
             )
-            .returning(StudentsOrm.id)
+            .returning(StudentsOrm)
         )
-        student_id = (await self.session.execute(stmt)).scalar_one_or_none()
-        if student_id is None:
-            return None
-        return await self.get(id=student_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def create_courses_do_nothing(
         self,

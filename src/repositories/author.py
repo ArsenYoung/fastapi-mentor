@@ -1,3 +1,4 @@
+from pickletools import int4
 from typing import Any, Sequence
 
 from sqlalchemy import false, select
@@ -14,7 +15,7 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
     async def create_do_nothing(
         self,
         values: dict[str, Any],
-    ) -> AuthorsOrm | None:
+    ) -> int | None:
         stmt = (
             insert(AuthorsOrm)
             .values(values)
@@ -22,12 +23,10 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
                 index_elements=[AuthorsOrm.author_code],
                 index_where=AuthorsOrm.is_deleted == false(),
             )
-            .returning(AuthorsOrm.id)
+            .returning(AuthorsOrm)
         )
-        author_id = (await self.session.execute(stmt)).scalar_one_or_none()
-        if author_id is None:
-            return None
-        return await self.get(id=author_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def create_books_do_nothing(
         self,
