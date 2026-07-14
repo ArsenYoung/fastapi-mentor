@@ -17,10 +17,10 @@ class StudentsCoursesService(BaseService):
         self.mapper = mapper
 
     async def create(self, data: StudentCreate) -> Student:
-        existing_student = await self.repo.get(
-            record_book_number=data.record_book_number
+        student = await self.repo.create_do_nothing(
+            self.mapper.map_student_create_to_insert_values(data),
         )
-        if existing_student is not None:
+        if student is None:
             raise AlreadyExistsException(
                 message="A student with this record book number already exists",
                 details=StudentErrorDetails(
@@ -28,9 +28,8 @@ class StudentsCoursesService(BaseService):
                 ),
             )
 
-        student = self.mapper.map_student_create_to_orm(data)
         await self.repo.create_courses_do_nothing(
-            self.mapper.map_course_create_to_insert_values(data.courses),
+            self.mapper.map_course_creates_to_insert_values(data.courses),
         )
         courses_from_db = await self.repo.get_courses_by_reestr_numbers(
             self.mapper.map_course_payloads_to_reestr_numbers(data.courses),
@@ -44,7 +43,7 @@ class StudentsCoursesService(BaseService):
             course.title = course_data.title
             student.courses.add(course)
 
-        student = await self.repo.create(student)
+        await self.repo.update(student)
         return self.mapper.map_student_to_read(student)
 
     async def get(self, student_id: int) -> Student:
@@ -116,9 +115,7 @@ class StudentsCoursesService(BaseService):
                     ),
                 )
 
-        student_updates = self.mapper.map_student_update_to_fields(data)
-        for field_name, value in student_updates.items():
-            setattr(student, field_name, value)
+        self.mapper.apply_student_update_to_orm(data, student)
 
         if courses is not None:
             await self.repo.create_courses_do_nothing(
@@ -139,8 +136,10 @@ class StudentsCoursesService(BaseService):
                 course.title = course_data.title
 
             await self.repo.create_student_course_links_do_nothing(
-                student_id,
-                self.mapper.map_courses_to_ids(courses_from_db),
+                self.mapper.map_student_course_links_to_insert_values(
+                    student_id,
+                    courses_from_db,
+                ),
             )
 
         await self.repo.update(student)

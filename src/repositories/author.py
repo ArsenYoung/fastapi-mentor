@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from sqlalchemy import false, select
 from sqlalchemy.dialects.postgresql import insert
@@ -11,26 +11,34 @@ from src.repositories.base import BaseRepository
 class AuthorRepository(BaseRepository[AuthorsOrm]):
     model = AuthorsOrm
 
+    async def create_do_nothing(
+        self,
+        values: dict[str, Any],
+    ) -> AuthorsOrm | None:
+        stmt = (
+            insert(AuthorsOrm)
+            .values(values)
+            .on_conflict_do_nothing(
+                index_elements=[AuthorsOrm.author_code],
+                index_where=AuthorsOrm.is_deleted == false(),
+            )
+            .returning(AuthorsOrm.id)
+        )
+        author_id = (await self.session.execute(stmt)).scalar_one_or_none()
+        if author_id is None:
+            return None
+        return await self.get(id=author_id)
+
     async def create_books_do_nothing(
         self,
-        author_id: int,
-        books: Sequence[tuple[str, str]],
+        values: Sequence[dict[str, Any]],
     ) -> None:
-        if not books:
+        if not values:
             return
 
         stmt = (
             insert(BooksOrm)
-            .values(
-                [
-                    {
-                        "author_id": author_id,
-                        "book_code": book_code,
-                        "title": title,
-                    }
-                    for book_code, title in books
-                ]
-            )
+            .values(list(values))
             .on_conflict_do_nothing(
                 index_elements=[BooksOrm.book_code],
                 index_where=BooksOrm.is_deleted == false(),

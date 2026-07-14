@@ -20,14 +20,18 @@ class StudentCoursesMapper:
             record_book_number=data.record_book_number,
         )
 
-    def map_student_update_to_fields(
+    def apply_student_update_to_orm(
         self,
         data: StudentUpdate,
-    ) -> dict[str, Any]:
-        return data.model_dump(
-            exclude_none=True,
-            exclude={"courses"},
-        )
+        student: StudentsOrm,
+    ) -> StudentsOrm:
+        if data.record_book_number is not None:
+            student.record_book_number = data.record_book_number
+        if data.first_name is not None:
+            student.first_name = data.first_name
+        if data.last_name is not None:
+            student.last_name = data.last_name
+        return student
 
     def map_course_payload_to_orm(
         self,
@@ -38,17 +42,39 @@ class StudentCoursesMapper:
             title=data.title,
         )
 
-    def map_course_create_to_insert_values(
+    def map_student_create_to_insert_values(
+        self,
+        data: StudentCreate,
+    ) -> dict[str, Any]:
+        return {
+            "first_name": data.first_name,
+            "last_name": data.last_name,
+            "record_book_number": data.record_book_number,
+        }
+
+    def map_course_creates_to_insert_values(
         self,
         courses: Sequence[CourseCreate],
-    ) -> list[tuple[str, str]]:
-        return [(course.reestr_number, course.title) for course in courses]
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "reestr_number": course.reestr_number,
+                "title": course.title,
+            }
+            for course in courses
+        ]
 
     def map_course_updates_to_insert_values(
         self,
         courses: Sequence[StudentCourseUpdateRequest],
-    ) -> list[tuple[str, str]]:
-        return [(course.reestr_number, course.title) for course in courses]
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "reestr_number": course.reestr_number,
+                "title": course.title,
+            }
+            for course in courses
+        ]
 
     def map_course_payloads_to_reestr_numbers(
         self,
@@ -61,6 +87,20 @@ class StudentCoursesMapper:
         courses: Sequence[CoursesOrm],
     ) -> list[int]:
         return [course.id for course in courses if course.id is not None]
+
+    def map_student_course_links_to_insert_values(
+        self,
+        student_id: int,
+        courses: Sequence[CoursesOrm],
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "student_id": student_id,
+                "course_id": course.id,
+            }
+            for course in courses
+            if course.id is not None
+        ]
 
     def map_course_to_read(self, course: CoursesOrm) -> Course:
         return Course(

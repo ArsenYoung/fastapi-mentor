@@ -17,17 +17,17 @@ class AuthorsBooksService(BaseService):
         self.mapper = mapper
 
     async def create(self, data: AuthorCreate) -> Author:
-        existing_author = await self.repo.get(author_code=data.author_code)
-        if existing_author is not None:
+        author = await self.repo.create_do_nothing(
+            self.mapper.map_author_create_to_insert_values(data),
+        )
+        if author is None:
             raise AlreadyExistsException(
                 message="An author with this code already exists",
                 details=AuthorErrorDetails(author_code=data.author_code),
             )
 
-        author = await self.repo.create(self.mapper.map_author_create_to_orm(data))
         await self.repo.create_books_do_nothing(
-            author.id,
-            self.mapper.map_book_create_to_insert_values(data.books),
+            self.mapper.map_book_creates_to_insert_values(author.id, data.books),
         )
         books_from_db = await self.repo.get_books_by_codes(
             self.mapper.map_book_payloads_to_codes(data.books),
@@ -105,14 +105,11 @@ class AuthorsBooksService(BaseService):
                     details=AuthorErrorDetails(author_code=author_code),
                 )
 
-        author_updates = self.mapper.map_author_update_to_fields(data)
-        for field_name, value in author_updates.items():
-            setattr(author, field_name, value)
+        self.mapper.apply_author_update_to_orm(data, author)
 
         if books is not None:
             await self.repo.create_books_do_nothing(
-                author_id,
-                self.mapper.map_book_updates_to_insert_values(books),
+                self.mapper.map_book_updates_to_insert_values(author_id, books),
             )
             books_from_db = await self.repo.get_books_by_codes(
                 self.mapper.map_book_payloads_to_codes(books),

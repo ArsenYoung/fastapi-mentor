@@ -1,4 +1,7 @@
-from sqlalchemy import select
+from typing import Any
+
+from sqlalchemy import false, select
+from sqlalchemy.dialects.postgresql import insert
 
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
@@ -7,6 +10,22 @@ from src.repositories.base import BaseRepository
 
 class PersonRepository(BaseRepository[PersonsOrm]):
     model = PersonsOrm
+
+    async def create_passport_do_nothing(
+        self,
+        values: dict[str, Any],
+    ) -> PassportsOrm | None:
+        stmt = (
+            insert(PassportsOrm)
+            .values(values)
+            .on_conflict_do_nothing(
+                index_elements=[PassportsOrm.number],
+                index_where=PassportsOrm.is_deleted == false(),
+            )
+            .returning(PassportsOrm)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_person_by_passport_number(
         self,

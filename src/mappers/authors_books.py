@@ -13,14 +13,18 @@ from src.schemas.books import Book, BookCreate
 
 
 class AuthorsBooksMapper:
-    def map_author_update_to_fields(
+    def apply_author_update_to_orm(
         self,
         data: AuthorUpdate,
-    ) -> dict[str, Any]:
-        return data.model_dump(
-            exclude_none=True,
-            exclude={"books"},
-        )
+        author: AuthorsOrm,
+    ) -> AuthorsOrm:
+        if data.author_code is not None:
+            author.author_code = data.author_code
+        if data.first_name is not None:
+            author.first_name = data.first_name
+        if data.last_name is not None:
+            author.last_name = data.last_name
+        return author
 
     def map_book_update_to_orm(self, data: AuthorBookUpdateRequest) -> BooksOrm:
         return BooksOrm(
@@ -28,17 +32,43 @@ class AuthorsBooksMapper:
             title=data.title,
         )
 
+    def map_author_create_to_insert_values(
+        self,
+        data: AuthorCreate,
+    ) -> dict[str, Any]:
+        return {
+            "author_code": data.author_code,
+            "first_name": data.first_name,
+            "last_name": data.last_name,
+        }
+
     def map_book_updates_to_insert_values(
         self,
+        author_id: int,
         books: Sequence[AuthorBookUpdateRequest],
-    ) -> list[tuple[str, str]]:
-        return [(book.book_code, book.title) for book in books]
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "author_id": author_id,
+                "book_code": book.book_code,
+                "title": book.title,
+            }
+            for book in books
+        ]
 
-    def map_book_create_to_insert_values(
+    def map_book_creates_to_insert_values(
         self,
+        author_id: int,
         books: Sequence[BookCreate],
-    ) -> list[tuple[str, str]]:
-        return [(book.book_code, book.title) for book in books]
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "author_id": author_id,
+                "book_code": book.book_code,
+                "title": book.title,
+            }
+            for book in books
+        ]
 
     def map_book_payloads_to_codes(
         self,

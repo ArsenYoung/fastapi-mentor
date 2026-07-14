@@ -3,6 +3,7 @@ from typing import Any, Sequence
 from src.models.passports import PassportsOrm
 from src.models.persons import PersonsOrm
 from src.schemas.passports import Passport
+from src.schemas.passports import PassportCreate
 from src.schemas.passports import PassportUpdate
 from src.schemas.persons import (
     Person,
@@ -13,20 +14,27 @@ from src.schemas.persons import (
 
 
 class PersonsPassportsMapper:
-    def map_person_update_to_fields(
+    def apply_person_update_to_orm(
         self,
         data: PersonUpdate,
-    ) -> dict[str, Any]:
-        return data.model_dump(
-            exclude_none=True,
-            exclude={"passport"},
-        )
+        person: PersonsOrm,
+    ) -> PersonsOrm:
+        if data.first_name is not None:
+            person.first_name = data.first_name
+        if data.last_name is not None:
+            person.last_name = data.last_name
+        return person
 
-    def map_passport_update_to_fields(
+    def apply_passport_update_to_orm(
         self,
         data: PassportUpdate,
-    ) -> dict[str, Any]:
-        return data.model_dump(exclude_none=True)
+        passport: PassportsOrm,
+    ) -> PassportsOrm:
+        if data.number is not None:
+            passport.number = data.number
+        if data.registrated_in is not None:
+            passport.registrated_in = data.registrated_in
+        return passport
 
     def map_person_create_to_orm(self, data: PersonCreate) -> PersonsOrm:
         return PersonsOrm(
@@ -37,6 +45,27 @@ class PersonsPassportsMapper:
                 registrated_in=data.passport.registrated_in,
             ),
         )
+
+    def map_person_create_to_orm_without_passport(
+        self,
+        data: PersonCreate,
+    ) -> PersonsOrm:
+        return PersonsOrm(
+            first_name=data.first_name,
+            last_name=data.last_name,
+        )
+
+    def map_passport_create_to_insert_values(
+        self,
+        *,
+        person_id: int,
+        data: PassportCreate,
+    ) -> dict[str, Any]:
+        return {
+            "person_id": person_id,
+            "number": data.number,
+            "registrated_in": data.registrated_in,
+        }
 
     def map_passport_to_read(self, passport: PassportsOrm) -> Passport:
         return Passport(

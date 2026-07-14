@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from sqlalchemy import false, select
 from sqlalchemy.dialects.postgresql import insert
@@ -12,24 +12,34 @@ from src.repositories.base import BaseRepository
 class StudentRepository(BaseRepository[StudentsOrm]):
     model = StudentsOrm
 
+    async def create_do_nothing(
+        self,
+        values: dict[str, Any],
+    ) -> StudentsOrm | None:
+        stmt = (
+            insert(StudentsOrm)
+            .values(values)
+            .on_conflict_do_nothing(
+                index_elements=[StudentsOrm.record_book_number],
+                index_where=StudentsOrm.is_deleted == false(),
+            )
+            .returning(StudentsOrm.id)
+        )
+        student_id = (await self.session.execute(stmt)).scalar_one_or_none()
+        if student_id is None:
+            return None
+        return await self.get(id=student_id)
+
     async def create_courses_do_nothing(
         self,
-        courses: Sequence[tuple[str, str]],
+        values: Sequence[dict[str, Any]],
     ) -> None:
-        if not courses:
+        if not values:
             return
 
         stmt = (
             insert(CoursesOrm)
-            .values(
-                [
-                    {
-                        "reestr_number": reestr_number,
-                        "title": title,
-                    }
-                    for reestr_number, title in courses
-                ]
-            )
+            .values(list(values))
             .on_conflict_do_nothing(
                 index_elements=[CoursesOrm.reestr_number],
                 index_where=CoursesOrm.is_deleted == false(),
@@ -39,23 +49,14 @@ class StudentRepository(BaseRepository[StudentsOrm]):
 
     async def create_student_course_links_do_nothing(
         self,
-        student_id: int,
-        course_ids: Sequence[int],
+        values: Sequence[dict[str, Any]],
     ) -> None:
-        if not course_ids:
+        if not values:
             return
 
         stmt = (
             insert(StudentsCoursesOrm)
-            .values(
-                [
-                    {
-                        "student_id": student_id,
-                        "course_id": course_id,
-                    }
-                    for course_id in course_ids
-                ]
-            )
+            .values(list(values))
             .on_conflict_do_nothing(
                 index_elements=[
                     StudentsCoursesOrm.student_id,
