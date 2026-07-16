@@ -18,22 +18,23 @@ class AuthorsBooksService(BaseService):
 
     async def create(self, data: AuthorCreate) -> Author:
         book_codes = self.mapper.map_book_payloads_to_codes(data.books)
-        author_values = self.mapper.map_author_create_to_insert_values(data)
 
-        author = await self.repo.create_do_nothing(author_values)
+        author = await self.repo.create_do_nothing(
+            self.mapper.map_author_create_to_orm(data),
+        )
         if author is None:
             raise AlreadyExistsException(
                 message="An author with this code already exists",
                 details=AuthorErrorDetails(author_code=data.author_code),
             )
 
-        book_values = self.mapper.map_book_creates_to_insert_values(
+        book_orms = self.mapper.map_book_creates_to_orms(
             author.id,
             data.books,
         )
-        created_books = await self.repo.create_books_do_nothing(book_values)
+        created_books = await self.repo.create_books_do_nothing(book_orms)
 
-        if len(created_books) != len(book_values):
+        if len(created_books) != len(book_orms):
             created_book_codes = set(self.mapper.map_books_to_codes(created_books))
             for book_code in book_codes:
                 if book_code not in created_book_codes:
@@ -90,20 +91,13 @@ class AuthorsBooksService(BaseService):
                 details=AuthorErrorDetails(author_id=author_id),
             )
 
-        author_code = data.author_code
         books = data.books
-
-        if author_code is not None and author_code != author.author_code:
-            existing_author = await self.repo.get(
-                author_code=author_code,
-            )
-            if existing_author is not None and existing_author.id != author_id:
-                raise AlreadyExistsException(
-                    message="An author with this code already exists",
-                    details=AuthorErrorDetails(author_code=author_code),
-                )
-
-        self.mapper.apply_author_update_to_orm(data, author)
+        author_patch = self.mapper.map_author_update_to_orm(data)
+        has_author_updates = (
+            data.author_code is not None
+            or data.first_name is not None
+            or data.last_name is not None
+        )
 
         if books is not None:
             book_codes = self.mapper.map_book_payloads_to_codes(books)
@@ -130,10 +124,23 @@ class AuthorsBooksService(BaseService):
                             book_code=book.book_code,
                         ),
                     )
-            self.mapper.apply_book_updates_to_orms(
-                books,
-                books_with_requested_codes,
-            )
 
-        await self.repo.update(author)
+            book_patches_by_code = {
+                book.book_code: book
+                for book in self.mapper.map_book_updates_to_orms(books)
+            }
+            for book in books_with_requested_codes:
+                await self.repo.update_book_by_id(
+                    book.id,
+                    book_patches_by_code[book.book_code],
+                )
+
+        if has_author_updates:
+            updated_author = await self.repo.update_by_id(author_id, author_patch)
+            if updated_author is None:
+                raise AlreadyExistsException(
+                    message="An author with this code already exists",
+                    details=AuthorErrorDetails(author_code=data.author_code),
+                )
+
         self.logger.info("author_updated", author_id=author.id)

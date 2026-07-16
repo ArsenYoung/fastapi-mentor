@@ -16,7 +16,7 @@ class PersonsPassportsService(BaseService):
             self.mapper.map_person_create_to_orm_without_passport(data),
         )
         passport = await self.repo.create_passport_do_nothing(
-            self.mapper.map_passport_create_to_insert_values(
+            self.mapper.map_passport_create_to_orm(
                 person_id=person.id,
                 data=data.passport,
             ),
@@ -78,8 +78,11 @@ class PersonsPassportsService(BaseService):
             )
 
         passport = data.passport
-
-        self.mapper.apply_person_update_to_orm(data, person)
+        person_patch = self.mapper.map_person_update_to_orm(data)
+        has_person_updates = (
+            data.first_name is not None
+            or data.last_name is not None
+        )
 
         if passport is not None:
             has_passport_updates = (
@@ -107,9 +110,16 @@ class PersonsPassportsService(BaseService):
                             ),
                         )
 
-                self.mapper.apply_passport_update_to_orm(passport, person_passport)
+                passport_patch = self.mapper.map_passport_update_to_orm(passport)
+                if has_passport_updates:
+                    await self.repo.update_passport_by_id(
+                        person_passport.id,
+                        passport_patch,
+                    )
 
-        await self.repo.update(person)
+        if has_person_updates:
+            await self.repo.update_by_id(person_id, person_patch)
+
         self.logger.info(
             "person_updated",
             person_id=person.id,

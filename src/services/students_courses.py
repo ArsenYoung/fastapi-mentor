@@ -18,7 +18,7 @@ class StudentsCoursesService(BaseService):
 
     async def create(self, data: StudentCreate) -> Student:
         student = await self.repo.create_do_nothing(
-            self.mapper.map_student_create_to_insert_values(data),
+            self.mapper.map_student_create_to_orm(data),
         )
         if student is None:
             raise AlreadyExistsException(
@@ -29,7 +29,7 @@ class StudentsCoursesService(BaseService):
             )
 
         await self.repo.create_courses_do_nothing(
-            self.mapper.map_course_creates_to_insert_values(data.courses),
+            self.mapper.map_course_creates_to_orms(data.courses),
         )
         courses_from_db = await self.repo.get_courses_by_reestr_numbers(
             self.mapper.map_course_payloads_to_reestr_numbers(data.courses),
@@ -99,6 +99,12 @@ class StudentsCoursesService(BaseService):
 
         record_book_number = data.record_book_number
         courses = data.courses
+        student_patch = self.mapper.map_student_update_to_orm(data)
+        has_student_updates = (
+            data.record_book_number is not None
+            or data.first_name is not None
+            or data.last_name is not None
+        )
 
         if (
             record_book_number is not None
@@ -115,11 +121,9 @@ class StudentsCoursesService(BaseService):
                     ),
                 )
 
-        self.mapper.apply_student_update_to_orm(data, student)
-
         if courses is not None:
             await self.repo.create_courses_do_nothing(
-                self.mapper.map_course_updates_to_insert_values(courses),
+                self.mapper.map_course_updates_to_orms(courses),
             )
             courses_from_db = await self.repo.get_courses_by_reestr_numbers(
                 self.mapper.map_course_payloads_to_reestr_numbers(courses),
@@ -128,19 +132,28 @@ class StudentsCoursesService(BaseService):
             courses_from_db_by_reestr_number = {
                 course.reestr_number: course for course in courses_from_db
             }
+            course_patches_by_reestr_number = {
+                course.reestr_number: course
+                for course in self.mapper.map_course_updates_to_orms(courses)
+            }
 
             for course_data in courses:
                 course = courses_from_db_by_reestr_number.get(
                     course_data.reestr_number
                 )
-                course.title = course_data.title
+                await self.repo.update_course_by_id(
+                    course.id,
+                    course_patches_by_reestr_number[course.reestr_number],
+                )
 
             await self.repo.create_student_course_links_do_nothing(
-                self.mapper.map_student_course_links_to_insert_values(
+                self.mapper.map_student_course_links_to_orms(
                     student_id,
                     courses_from_db,
                 ),
             )
 
-        await self.repo.update(student)
+        if has_student_updates:
+            await self.repo.update_by_id(student_id, student_patch)
+
         self.logger.info("student_updated", student_id=student.id)

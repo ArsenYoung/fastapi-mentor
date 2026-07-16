@@ -1,6 +1,6 @@
-from typing import Any, Sequence
+from typing import Sequence
 
-from sqlalchemy import false, select
+from sqlalchemy import false, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from src.models.courses import CoursesOrm
@@ -14,11 +14,15 @@ class StudentRepository(BaseRepository[StudentsOrm]):
 
     async def create_do_nothing(
         self,
-        values: dict[str, Any],
+        student: StudentsOrm,
     ) -> StudentsOrm | None:
         stmt = (
             insert(StudentsOrm)
-            .values(values)
+            .values(
+                first_name=student.first_name,
+                last_name=student.last_name,
+                record_book_number=student.record_book_number,
+            )
             .on_conflict_do_nothing(
                 index_elements=[StudentsOrm.record_book_number],
                 index_where=StudentsOrm.is_deleted == false(),
@@ -30,14 +34,22 @@ class StudentRepository(BaseRepository[StudentsOrm]):
 
     async def create_courses_do_nothing(
         self,
-        values: Sequence[dict[str, Any]],
+        courses: Sequence[CoursesOrm],
     ) -> None:
-        if not values:
+        if not courses:
             return
 
         stmt = (
             insert(CoursesOrm)
-            .values(list(values))
+            .values(
+                [
+                    {
+                        "reestr_number": course.reestr_number,
+                        "title": course.title,
+                    }
+                    for course in courses
+                ]
+            )
             .on_conflict_do_nothing(
                 index_elements=[CoursesOrm.reestr_number],
                 index_where=CoursesOrm.is_deleted == false(),
@@ -47,14 +59,22 @@ class StudentRepository(BaseRepository[StudentsOrm]):
 
     async def create_student_course_links_do_nothing(
         self,
-        values: Sequence[dict[str, Any]],
+        links: Sequence[StudentsCoursesOrm],
     ) -> None:
-        if not values:
+        if not links:
             return
 
         stmt = (
             insert(StudentsCoursesOrm)
-            .values(list(values))
+            .values(
+                [
+                    {
+                        "student_id": link.student_id,
+                        "course_id": link.course_id,
+                    }
+                    for link in links
+                ]
+            )
             .on_conflict_do_nothing(
                 index_elements=[
                     StudentsCoursesOrm.student_id,
@@ -82,6 +102,32 @@ class StudentRepository(BaseRepository[StudentsOrm]):
             stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
         return list(result.unique().scalars().all())
+
+    async def update_course_by_id(
+        self,
+        course_id: int,
+        patch: CoursesOrm,
+    ) -> CoursesOrm | None:
+        values = self._get_update_values(patch)
+        if not values:
+            stmt = select(CoursesOrm).where(
+                CoursesOrm.id == course_id,
+                CoursesOrm.is_deleted.is_(False),
+            )
+            result = await self.session.execute(stmt)
+            return result.scalar_one_or_none()
+
+        stmt = (
+            update(CoursesOrm)
+            .where(
+                CoursesOrm.id == course_id,
+                CoursesOrm.is_deleted.is_(False),
+            )
+            .values(**values)
+            .returning(CoursesOrm)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def lock_courses_by_ids(self, course_ids: Sequence[int]) -> None:
         if not course_ids:

@@ -1,6 +1,4 @@
-from typing import Any
-
-from sqlalchemy import false, select
+from sqlalchemy import false, select, update
 from sqlalchemy.dialects.postgresql import insert
 
 from src.models.passports import PassportsOrm
@@ -13,11 +11,15 @@ class PersonRepository(BaseRepository[PersonsOrm]):
 
     async def create_passport_do_nothing(
         self,
-        values: dict[str, Any],
+        passport: PassportsOrm,
     ) -> PassportsOrm | None:
         stmt = (
             insert(PassportsOrm)
-            .values(values)
+            .values(
+                person_id=passport.person_id,
+                number=passport.number,
+                registrated_in=passport.registrated_in,
+            )
             .on_conflict_do_nothing(
                 index_elements=[PassportsOrm.number],
                 index_where=PassportsOrm.is_deleted == false(),
@@ -59,5 +61,31 @@ class PersonRepository(BaseRepository[PersonsOrm]):
         )
         if for_update:
             stmt = stmt.with_for_update()
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_passport_by_id(
+        self,
+        passport_id: int,
+        patch: PassportsOrm,
+    ) -> PassportsOrm | None:
+        values = self._get_update_values(patch)
+        if not values:
+            stmt = select(PassportsOrm).where(
+                PassportsOrm.id == passport_id,
+                PassportsOrm.is_deleted.is_(False),
+            )
+            result = await self.session.execute(stmt)
+            return result.scalar_one_or_none()
+
+        stmt = (
+            update(PassportsOrm)
+            .where(
+                PassportsOrm.id == passport_id,
+                PassportsOrm.is_deleted.is_(False),
+            )
+            .values(**values)
+            .returning(PassportsOrm)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()

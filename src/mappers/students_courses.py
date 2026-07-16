@@ -1,7 +1,8 @@
-from typing import Any, Sequence
+from typing import Sequence
 
 from src.models.courses import CoursesOrm
 from src.models.students import StudentsOrm
+from src.models.students_courses import StudentsCoursesOrm
 from src.schemas.courses import Course, CourseCreate
 from src.schemas.students import (
     Student,
@@ -14,67 +15,37 @@ from src.schemas.students import (
 
 class StudentCoursesMapper:
     def map_student_create_to_orm(self, data: StudentCreate) -> StudentsOrm:
-        return StudentsOrm(
-            first_name=data.first_name,
-            last_name=data.last_name,
-            record_book_number=data.record_book_number,
-        )
+        return StudentsOrm(**data.model_dump(exclude={"courses"}))
 
-    def apply_student_update_to_orm(
+    def map_student_update_to_orm(
         self,
         data: StudentUpdate,
-        student: StudentsOrm,
     ) -> StudentsOrm:
-        if data.record_book_number is not None:
-            student.record_book_number = data.record_book_number
-        if data.first_name is not None:
-            student.first_name = data.first_name
-        if data.last_name is not None:
-            student.last_name = data.last_name
-        return student
+        return StudentsOrm(
+            **data.model_dump(
+                exclude={"courses"},
+                exclude_none=True,
+                exclude_unset=True,
+            )
+        )
 
     def map_course_payload_to_orm(
         self,
         data: CourseCreate | StudentCourseUpdateRequest,
     ) -> CoursesOrm:
-        return CoursesOrm(
-            reestr_number=data.reestr_number,
-            title=data.title,
-        )
+        return CoursesOrm(**data.model_dump())
 
-    def map_student_create_to_insert_values(
-        self,
-        data: StudentCreate,
-    ) -> dict[str, Any]:
-        return {
-            "first_name": data.first_name,
-            "last_name": data.last_name,
-            "record_book_number": data.record_book_number,
-        }
-
-    def map_course_creates_to_insert_values(
+    def map_course_creates_to_orms(
         self,
         courses: Sequence[CourseCreate],
-    ) -> list[dict[str, Any]]:
-        return [
-            {
-                "reestr_number": course.reestr_number,
-                "title": course.title,
-            }
-            for course in courses
-        ]
+    ) -> list[CoursesOrm]:
+        return [self.map_course_payload_to_orm(course) for course in courses]
 
-    def map_course_updates_to_insert_values(
+    def map_course_updates_to_orms(
         self,
         courses: Sequence[StudentCourseUpdateRequest],
-    ) -> list[dict[str, Any]]:
-        return [
-            {
-                "reestr_number": course.reestr_number,
-                "title": course.title,
-            }
-            for course in courses
-        ]
+    ) -> list[CoursesOrm]:
+        return [self.map_course_payload_to_orm(course) for course in courses]
 
     def map_course_payloads_to_reestr_numbers(
         self,
@@ -88,33 +59,29 @@ class StudentCoursesMapper:
     ) -> list[int]:
         return [course.id for course in courses if course.id is not None]
 
-    def map_student_course_links_to_insert_values(
+    def map_student_course_links_to_orms(
         self,
         student_id: int,
         courses: Sequence[CoursesOrm],
-    ) -> list[dict[str, Any]]:
+    ) -> list[StudentsCoursesOrm]:
         return [
-            {
-                "student_id": student_id,
-                "course_id": course.id,
-            }
+            StudentsCoursesOrm(
+                student_id=student_id,
+                course_id=course.id,
+            )
             for course in courses
             if course.id is not None
         ]
 
     def map_course_to_read(self, course: CoursesOrm) -> Course:
-        return Course(
-            id=course.id,
-            reestr_number=course.reestr_number,
-            title=course.title,
-        )
+        return Course.model_validate(course)
 
     def map_student_to_read(self, student: StudentsOrm) -> Student:
         return Student(
-            id=student.id,
-            first_name=student.first_name,
-            last_name=student.last_name,
-            record_book_number=student.record_book_number,
+            **Student.model_validate(
+                student,
+                from_attributes=True,
+            ).model_dump(exclude={"courses"}),
             courses=[
                 self.map_course_to_read(course)
                 for course in sorted(
