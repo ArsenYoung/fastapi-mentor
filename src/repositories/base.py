@@ -27,7 +27,7 @@ class BaseRepository(Generic[ModelT]):
         if for_update:
             stmt = stmt.with_for_update()
         result = await self.session.execute(stmt)
-        return result.unique().scalar_one_or_none()
+        return result.scalar_one_or_none()
 
     async def get_paginated_list(
         self, limit: int, offset: int
@@ -40,7 +40,7 @@ class BaseRepository(Generic[ModelT]):
             .limit(limit + 1)
         )
         result = await self.session.execute(stmt)
-        items = list(result.unique().scalars().all())
+        items = result.scalars().all()
         has_next = len(items) > limit
         return items[:limit], has_next
 
