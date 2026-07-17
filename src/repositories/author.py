@@ -12,17 +12,13 @@ from src.repositories.base import BaseRepository
 class AuthorRepository(BaseRepository[AuthorsOrm]):
     model = AuthorsOrm
 
-    async def create_do_nothing(
+    async def create_author(
         self,
         author: AuthorsOrm,
     ) -> AuthorsOrm | None:
         stmt = (
             insert(AuthorsOrm)
-            .values(
-                author_code=author.author_code,
-                first_name=author.first_name,
-                last_name=author.last_name,
-            )
+            .values(**self._get_update_values(author))
             .on_conflict_do_nothing(
                 index_elements=[AuthorsOrm.author_code],
                 index_where=AuthorsOrm.is_deleted == false(),
@@ -32,13 +28,13 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def update_by_id(
+    async def update_author_by_id(
         self,
         item_id: int,
         patch: AuthorsOrm,
     ) -> AuthorsOrm | None:
-        values = self._get_update_values(patch)
-        if not values:
+        update_values = self._get_update_values(patch)
+        if not update_values:
             return await self.get(id=item_id)
 
         stmt = (
@@ -47,16 +43,17 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
                 AuthorsOrm.id == item_id,
                 AuthorsOrm.is_deleted.is_(False),
             )
-            .values(**values)
+            .values(**update_values)
             .returning(AuthorsOrm)
         )
 
-        if "author_code" in values:
+        author_code_key = AuthorsOrm.author_code.key
+        if author_code_key in update_values:
             other_author = aliased(AuthorsOrm)
             stmt = stmt.where(
                 ~select(other_author.id)
                 .where(
-                    other_author.author_code == values["author_code"],
+                    other_author.author_code == update_values[author_code_key],
                     other_author.is_deleted.is_(False),
                     other_author.id != item_id,
                 )
@@ -74,29 +71,61 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
         if not books:
             return []
 
+        book_code_key = BooksOrm.book_code.key
+        book_values = [self._get_update_values(book) for book in books]
+        update_keys = [key for key in book_values[0] if key != book_code_key]
+
+        if not update_keys:
+            stmt = (
+                select(BooksOrm.book_code)
+                .where(
+                    BooksOrm.author_id == author_id,
+                    BooksOrm.book_code.in_(
+                        [book_value[book_code_key] for book_value in book_values]
+                    ),
+                    BooksOrm.is_deleted.is_(False),
+                )
+                .order_by(BooksOrm.book_code)
+            )
+            result = await self.session.execute(stmt)
+            return list(result.scalars().all())
+
+        book_update_keys = [book_code_key, *update_keys]
         book_updates = (
             values(
-                column("book_code", BooksOrm.book_code.type),
-                column("title", BooksOrm.title.type),
+                *[
+                    column(key, getattr(BooksOrm, key).type)
+                    for key in book_update_keys
+                ],
                 name="book_updates",
             )
-            .data([(book.book_code, book.title) for book in books])
+            .data(
+                [
+                    tuple(book_value[key] for key in book_update_keys)
+                    for book_value in book_values
+                ]
+            )
             .alias("book_updates")
         )
         stmt = (
             update(BooksOrm)
             .where(
                 BooksOrm.author_id == author_id,
-                BooksOrm.book_code == book_updates.c.book_code,
+                BooksOrm.book_code == book_updates.c[book_code_key],
                 BooksOrm.is_deleted.is_(False),
             )
-            .values(title=book_updates.c.title)
+            .values(
+                {
+                    key: book_updates.c[key]
+                    for key in update_keys
+                }
+            )
             .returning(BooksOrm.book_code)
         )
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def create_books_do_nothing(
+    async def create_books(
         self,
         books: Sequence[BooksOrm],
     ) -> list[BooksOrm]:
@@ -105,16 +134,7 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
 
         stmt = (
             insert(BooksOrm)
-            .values(
-                [
-                    {
-                        "author_id": book.author_id,
-                        "book_code": book.book_code,
-                        "title": book.title,
-                    }
-                    for book in books
-                ]
-            )
+            .values([self._get_update_values(book) for book in books])
             .on_conflict_do_nothing(
                 index_elements=[BooksOrm.book_code],
                 index_where=BooksOrm.is_deleted == false(),

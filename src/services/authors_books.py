@@ -19,7 +19,7 @@ class AuthorsBooksService(BaseService):
     async def create(self, data: AuthorCreate) -> Author:
         book_codes = self.mapper.map_book_payloads_to_codes(data.books)
 
-        author = await self.repo.create_do_nothing(
+        author = await self.repo.create_author(
             self.mapper.map_author_create_to_orm(data),
         )
         if author is None:
@@ -32,7 +32,7 @@ class AuthorsBooksService(BaseService):
             author.id,
             data.books,
         )
-        created_books = await self.repo.create_books_do_nothing(book_orms)
+        created_books = await self.repo.create_books(book_orms)
 
         if len(created_books) != len(book_orms):
             created_book_codes = set(self.mapper.map_books_to_codes(created_books))
@@ -94,7 +94,7 @@ class AuthorsBooksService(BaseService):
         books = data.books
         author_patch = self.mapper.map_author_update_to_orm(data)
 
-        updated_author = await self.repo.update_by_id(author_id, author_patch)
+        updated_author = await self.repo.update_author_by_id(author_id, author_patch)
         if updated_author is None:
             raise AlreadyExistsException(
                 message="An author with this code already exists",
