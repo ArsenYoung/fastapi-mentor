@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from sqlalchemy import false, select, update
+from sqlalchemy import column, false, select, update, values
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import aliased
 
@@ -66,31 +66,35 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def update_book_by_id(
+    async def update_books_by_author_id(
         self,
-        book_id: int,
-        patch: BooksOrm,
-    ) -> BooksOrm | None:
-        values = self._get_update_values(patch)
-        if not values:
-            stmt = select(BooksOrm).where(
-                BooksOrm.id == book_id,
-                BooksOrm.is_deleted.is_(False),
-            )
-            result = await self.session.execute(stmt)
-            return result.scalar_one_or_none()
+        author_id: int,
+        books: Sequence[BooksOrm],
+    ) -> list[str]:
+        if not books:
+            return []
 
+        book_updates = (
+            values(
+                column("book_code", BooksOrm.book_code.type),
+                column("title", BooksOrm.title.type),
+                name="book_updates",
+            )
+            .data([(book.book_code, book.title) for book in books])
+            .alias("book_updates")
+        )
         stmt = (
             update(BooksOrm)
             .where(
-                BooksOrm.id == book_id,
+                BooksOrm.author_id == author_id,
+                BooksOrm.book_code == book_updates.c.book_code,
                 BooksOrm.is_deleted.is_(False),
             )
-            .values(**values)
-            .returning(BooksOrm)
+            .values(title=book_updates.c.title)
+            .returning(BooksOrm.book_code)
         )
         result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        return list(result.scalars().all())
 
     async def create_books_do_nothing(
         self,

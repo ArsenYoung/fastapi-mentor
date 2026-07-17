@@ -84,7 +84,7 @@ class AuthorsBooksService(BaseService):
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update(self, author_id: int, data: AuthorUpdate) -> None:
-        author = await self.repo.get(id=author_id, for_update=True)
+        author = await self.repo.get(id=author_id)
         if author is None:
             raise ObjectNotFoundException(
                 message="Author not found",
@@ -93,54 +93,45 @@ class AuthorsBooksService(BaseService):
 
         books = data.books
         author_patch = self.mapper.map_author_update_to_orm(data)
-        has_author_updates = (
-            data.author_code is not None
-            or data.first_name is not None
-            or data.last_name is not None
-        )
+
+        updated_author = await self.repo.update_by_id(author_id, author_patch)
+        if updated_author is None:
+            raise AlreadyExistsException(
+                message="An author with this code already exists",
+                details=AuthorErrorDetails(author_code=data.author_code),
+            )
 
         if books is not None:
-            book_codes = self.mapper.map_book_payloads_to_codes(books)
-            books_with_requested_codes = await self.repo.get_books_by_codes(
-                book_codes,
-                for_update=True,
+            book_patches = self.mapper.map_book_updates_to_orms(books)
+            requested_book_codes = self.mapper.map_book_payloads_to_codes(books)
+            updated_book_codes = set(
+                await self.repo.update_books_by_author_id(
+                    author_id,
+                    book_patches,
+                )
             )
-            found_book_codes = {
-                book.book_code for book in books_with_requested_codes
-            }
 
-            for book_code in book_codes:
-                if book_code not in found_book_codes:
-                    raise ObjectNotFoundException(
-                        message="Book not found",
-                        details=BookErrorDetails(book_code=book_code),
-                    )
+            if len(requested_book_codes) != len(updated_book_codes):
+                unresolved_book_codes = list(
+                    set(requested_book_codes) - updated_book_codes,
+                )
+                existing_books = await self.repo.get_books_by_codes(
+                    unresolved_book_codes,
+                )
+                existing_book_codes = set(
+                    self.mapper.map_books_to_codes(existing_books),
+                )
 
-            for book in books_with_requested_codes:
-                if book.author_id != author_id:
+                for book_code in unresolved_book_codes:
+                    if book_code not in existing_book_codes:
+                        raise ObjectNotFoundException(
+                            message="Book not found",
+                            details=BookErrorDetails(book_code=book_code),
+                        )
+
                     raise AlreadyExistsException(
                         message="A book with this code already exists",
-                        details=BookErrorDetails(
-                            book_code=book.book_code,
-                        ),
+                        details=BookErrorDetails(book_code=book_code),
                     )
-
-            book_patches_by_code = {
-                book.book_code: book
-                for book in self.mapper.map_book_updates_to_orms(books)
-            }
-            for book in books_with_requested_codes:
-                await self.repo.update_book_by_id(
-                    book.id,
-                    book_patches_by_code[book.book_code],
-                )
-
-        if has_author_updates:
-            updated_author = await self.repo.update_by_id(author_id, author_patch)
-            if updated_author is None:
-                raise AlreadyExistsException(
-                    message="An author with this code already exists",
-                    details=AuthorErrorDetails(author_code=data.author_code),
-                )
 
         self.logger.info("author_updated", author_id=author.id)
