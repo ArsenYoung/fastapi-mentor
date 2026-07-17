@@ -1,9 +1,7 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from sqlalchemy import column, false, select, update, values
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.orm import aliased
-
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
 from src.repositories.base import BaseRepository
@@ -28,38 +26,35 @@ class AuthorRepository(BaseRepository[AuthorsOrm]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def update_author_by_id(
+    async def update_author(
         self,
-        item_id: int,
-        patch: AuthorsOrm,
+        author_id: int,
+        update_values: dict[str, Any],
     ) -> AuthorsOrm | None:
-        update_values = self._get_update_values(patch)
-        if not update_values:
-            return await self.get(id=item_id)
-
-        stmt = (
-            update(AuthorsOrm)
-            .where(
-                AuthorsOrm.id == item_id,
-                AuthorsOrm.is_deleted.is_(False),
-            )
-            .values(**update_values)
-            .returning(AuthorsOrm)
+        insert_stmt = insert(AuthorsOrm).values(
+            id=author_id,
+            author_code=update_values["author_code"],
+            first_name=update_values["first_name"],
+            last_name=update_values["last_name"],
+            is_deleted=False,
         )
 
-        author_code_key = AuthorsOrm.author_code.key
-        if author_code_key in update_values:
-            other_author = aliased(AuthorsOrm)
-            stmt = stmt.where(
-                ~select(other_author.id)
-                .where(
-                    other_author.author_code == update_values[author_code_key],
-                    other_author.is_deleted.is_(False),
-                    other_author.id != item_id,
-                )
-                .exists()
+        stmt = (
+            insert_stmt.on_conflict_do_update(
+                index_elements=[AuthorsOrm.author_code],
+                # если ставлю ON CONFLICT(author_code) не ловит конфликт по id и даёт IntegrityError.
+                # если ставлю ON CONFLICT(id) обновит по id, но не ловит конфликт занятого author_code и тоже может дать IntegrityError.
+                # Одним ON CONFLICT нельзя обработать оба случая как “id или author_code”.
+                index_where=AuthorsOrm.is_deleted == false(),
+                set_={
+                    "id": insert_stmt.excluded.id,
+                    "author_code": insert_stmt.excluded.author_code,
+                    "first_name": insert_stmt.excluded.first_name,
+                    "last_name": insert_stmt.excluded.last_name,
+                }
             )
-
+            .returning(AuthorsOrm)
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

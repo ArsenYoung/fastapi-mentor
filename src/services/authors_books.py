@@ -84,6 +84,7 @@ class AuthorsBooksService(BaseService):
         self.logger.info("author_deleted", author_id=author.id)
 
     async def update(self, author_id: int, data: AuthorUpdate) -> None:
+        books = data.books
         author = await self.repo.get(id=author_id)
         if author is None:
             raise ObjectNotFoundException(
@@ -91,10 +92,26 @@ class AuthorsBooksService(BaseService):
                 details=AuthorErrorDetails(author_id=author_id),
             )
 
-        books = data.books
-        author_patch = self.mapper.map_author_update_to_orm(data)
+        author_patch_values = self.mapper.map_author_update_to_values(data)
+        author_update_values = {
+            "author_code": author_patch_values.get(
+                "author_code",
+                author.author_code,
+            ),
+            "first_name": author_patch_values.get(
+                "first_name",
+                author.first_name,
+            ),
+            "last_name": author_patch_values.get(
+                "last_name",
+                author.last_name,
+            ),
+        }
 
-        updated_author = await self.repo.update_author_by_id(author_id, author_patch)
+        updated_author = await self.repo.update_author(
+            author_id,
+            author_update_values,
+        )
         if updated_author is None:
             raise AlreadyExistsException(
                 message="An author with this code already exists",
@@ -134,4 +151,4 @@ class AuthorsBooksService(BaseService):
                         details=BookErrorDetails(book_code=book_code),
                     )
 
-        self.logger.info("author_updated", author_id=author.id)
+        self.logger.info("author_updated", author_id=updated_author.id)

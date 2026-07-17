@@ -1,4 +1,4 @@
-from typing import Sequence
+from typing import Any, Sequence
 
 from src.models.authors import AuthorsOrm
 from src.models.books import BooksOrm
@@ -13,16 +13,14 @@ from src.schemas.books import Book, BookCreate
 
 
 class AuthorsBooksMapper:
-    def map_author_update_to_orm(
+    def map_author_update_to_values(
         self,
         data: AuthorUpdate,
-    ) -> AuthorsOrm:
-        return AuthorsOrm(
-            **data.model_dump(
-                exclude={"books"},
-                exclude_none=True,
-                exclude_unset=True,
-            )
+    ) -> dict[str, Any]:
+        return data.model_dump(
+            exclude={"books"},
+            exclude_none=True,
+            exclude_unset=True,
         )
 
     def map_book_update_to_orm(self, data: AuthorBookUpdateRequest) -> BooksOrm:
