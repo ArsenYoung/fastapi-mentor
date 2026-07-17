@@ -22,7 +22,7 @@
 Запустить приложение из корня проекта:
 
 ```bash
-cd /home/arsenii/Documents/Projects/Fastapi-test
+cd /home/arsenii/Documents/Projects/fastapi-mentor
 source .venv/bin/activate
 uvicorn src.application:get_app --reload --factory
 ```
@@ -53,9 +53,9 @@ docker compose down
 docker ps
 ```
 
-### Если порт 5432 уже занят
+### Если порт 5532 уже занят
 
-В проекте настроен PostgreSQL на хосте `5432`. Если на этой машине уже есть другой контейнер или служба на порту `5432`, остановите его или измените порт в `docker-compose.yaml` и в `alembic.ini`.
+В проекте настроен PostgreSQL на хосте `5532`. Если на этой машине уже есть другой контейнер или служба на порту `5532`, остановите его или измените порт в `docker-compose.yaml` и `.env`.
 
 ## Работа с Poetry
 
@@ -93,13 +93,13 @@ poetry run <command>
 
 ### Проверка конфигурации
 
-В `alembic.ini` используется строка подключения:
+Alembic берет строку подключения из `.env` через `src.config.Settings`.
 
-```ini
-sqlalchemy.url = postgresql+asyncpg://postgres:123456@localhost:5432/postgres
+```env
+postgres_url=postgresql+asyncpg://<user>:<password>@localhost:5532/<db>
 ```
 
-Если Docker-сервис работает на другом порту, замените `5432` на нужный.
+Если Docker-сервис работает на другом порту, замените `5532` на нужный.
 
 ### Создание миграции
 

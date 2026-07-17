@@ -1,11 +1,18 @@
-import os
+from pathlib import Path
 
-from pydantic import PostgresDsn, Field
-from pydantic_settings import BaseSettings
+from pydantic import PostgresDsn
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    postgres_url: PostgresDsn = Field(env='postgres_url')
+    model_config = SettingsConfigDict(
+        env_file=PROJECT_ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
-    class Config:
-        env_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+    postgres_url: PostgresDsn
+    log_level: str = "INFO"
+    log_json: bool = True

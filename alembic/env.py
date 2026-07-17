@@ -6,7 +6,15 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from src.models.users import Base
+from src.config import Settings
+from src.models.base import Base
+from src.models.authors import AuthorsOrm
+from src.models.books import BooksOrm
+from src.models.courses import CoursesOrm
+from src.models.students import StudentsOrm
+from src.models.persons import PersonsOrm
+from src.models.passports import PassportsOrm
+from src.models.students_courses import StudentsCoursesOrm
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -22,6 +30,8 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = Base.metadata
+
+config.set_main_option("sqlalchemy.url", str(Settings().postgres_url))
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

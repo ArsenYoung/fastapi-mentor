@@ -1,0 +1,35 @@
+from sqlalchemy import Index, String, text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.models.base import Base
+
+
+class CoursesOrm(Base):
+    __tablename__ = "courses"
+
+    __table_args__ = (
+        Index(
+            "uq_courses_reestr_number_active",
+            "reestr_number",
+            unique=True,
+            postgresql_where=text("is_deleted = False"),
+        ),
+    )
+
+    reestr_number: Mapped[str] = mapped_column(
+        String(4),
+        nullable=False,
+    )
+    title: Mapped[str] = mapped_column(
+        String(150),
+        nullable=False,
+    )
+
+    students: Mapped[set["StudentsOrm"]] = relationship(
+        secondary="students_courses",
+        back_populates="courses",
+        collection_class=set,
+        primaryjoin="CoursesOrm.id == StudentsCoursesOrm.course_id",
+        secondaryjoin="and_(StudentsOrm.id == StudentsCoursesOrm.student_id, StudentsOrm.is_deleted.is_(False))",
+        lazy="selectin",
+    )
